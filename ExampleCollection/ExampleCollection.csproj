@@ -1,0 +1,103 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{86533BE3-B1B6-432D-9BD5-6C5D923F9712}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>PRoConEvents</RootNamespace>
+    <AssemblyName>ExampleCollection</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>
+    </DocumentationFile>
+    <LangVersion>3</LangVersion>
+    <NoWarn>CS0169;CS0114;CS0162;CS0414;CS0168;CS0219;CS0649;CS0067;CS1690</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <NoWarn>CS0169;CS0114;CS0162;CS0414;CS0168;CS0219;CS0649;CS0067;CS1690</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="MySql.Data">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>.\MySql.Data.dll</HintPath>
+    </Reference>
+    <Reference Include="PRoCon.Core">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>.\PRoCon.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="AdKats.cs" />
+    <None Include="AdKatsLRT.cs" />
+    <None Include="BF4DB.cs" />
+    <None Include="CAdaptiveTicketCount.cs" />
+    <None Include="CBasicInGameInfo.cs" />
+    <None Include="ChatTriggerAutoResponder.cs" />
+    <None Include="CheatDetector.cs" />
+    <None Include="CLatencyManager.cs" />
+    <None Include="CPingPlayers.cs" />
+    <None Include="CServerKills.cs" />
+    <None Include="CServerRulesOnRequest.cs" />
+    <None Include="CSquadEnforcer.cs" />
+    <None Include="CUltimateMapManager.cs" />
+    <None Include="CVoteBan.cs" />
+    <None Include="CVoteBanBF3.cs" />
+    <None Include="CWatchdogLanguage.cs" />
+    <None Include="LanguageEnforcer.cs" />
+    <None Include="PBHackDetect.cs" />
+    <None Include="PBSSE.cs" />
+    <None Include="PRoConAPI.cs" />
+    <None Include="ProconRulz.cs" />
+    <None Include="TrueBalancer.cs" />
+    <None Include="PRoConPluginAPI.cs" />
+    <None Include="MULTIbalancer.cs" />
+    <None Include="InsaneLimits.cs" />
+    <None Include="CChatGUIDStatsLogger.cs" />
+    <None Include="CInGameAdmin.cs" />
+    <None Include="CPlayerMuter.cs" />
+    <None Include="xVotemap.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="MySql.Data.dll" />
+    <None Include="PRoCon.Core.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>xcopy $(TargetDir)$(TargetName).cs D:\PRocon\Plugins\BF4\ /s /e /y 
+del /s /q /f D:\PRoCon\Configs\$(TargetName).cfg</PostBuildEvent>
+  </PropertyGroup>
+</Project>
