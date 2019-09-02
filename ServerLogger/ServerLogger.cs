@@ -88,8 +88,8 @@ namespace PRoConEvents
 
         public void OnPluginLoaded(string strHostName, string strPort, string strPRoConVersion)
         {
-            Output.Listeners.Add(new TextWriterTraceListener(strHostName + "_" + strPort + "_" + ClassName + ".log") { TraceOutputOptions = TraceOptions.DateTime }); // output to debug file
-            Output.Listeners.Add(new ConsoleTraceListener());
+            Output.Listeners.Add(new TextWriterTraceListener(ClassName + "_" + strHostName + "_" + strPort + ".log") { TraceOutputOptions = TraceOptions.DateTime }); // output to debug file
+            //Output.Listeners.Add(new ConsoleTraceListener());
             Output.Listeners.Add(new PRoConTraceListener(this)); // output to pluginconsole
             Output.AutoFlush = true;
 
@@ -118,7 +118,7 @@ namespace PRoConEvents
 
         public string GetPluginWebsite()
         {
-            return "Change after push code";
+            return "https://github.com/IOL0ol1/ProconPlugins/blob/master/ServerLogger/ServerLogger.cs";
         }
 
         public string GetPluginName()
