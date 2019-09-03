@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Web.UI.WebControls;
 using PRoCon.Core;
 using PRoCon.Core.Players;
+using PRoCon.Core.Plugin;
 using PRoConEvents;
 
 namespace ConsoleApp1
@@ -15,18 +16,37 @@ namespace ConsoleApp1
         {
             try
             {
-                ServerLogger serverLogger = new ServerLogger();
-                serverLogger.ClassName = nameof(ServerLogger);
+
+                FriendManager friendManager = CreatePlugin<FriendManager>();
+                friendManager.OnPluginLoaded("", "", "");
+                friendManager.OnPluginEnable();
+                friendManager.OnPluginDisable();
+
+
+                RemoteManager remoteManager = CreatePlugin<RemoteManager>();
+                remoteManager.OnPluginLoaded("", "", "");
+                remoteManager.OnPluginEnable();
+                remoteManager.OnPluginDisable();
+
+
+                ServerLogger serverLogger = CreatePlugin<ServerLogger>();
                 serverLogger.OnPluginLoaded("", "", "");
                 serverLogger.OnPluginEnable();
                 serverLogger.OnPluginDisable();
             }
             catch (Exception ex)
             {
-                Trace.TraceError(ex.Message + ex.StackTrace);
+                Trace.TraceError(ex.ToString());
             }
-
             Console.ReadLine();
         }
+
+        private static T CreatePlugin<T>() where T : PRoConPluginAPI, new()
+        {
+            T plugin = new T();
+            plugin.ClassName = nameof(T);
+            return plugin;
+        }
+
     }
 }

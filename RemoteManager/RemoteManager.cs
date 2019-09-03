@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
@@ -85,6 +86,7 @@ namespace PRoConEvents
 
         public List<CPluginVariable> GetDisplayPluginVariables()
         {
+            // procon cmd
             if (!string.IsNullOrEmpty(rconCmd.Trim()))
             {
                 var console = new PRoConTraceListener(this, 1);
@@ -97,6 +99,7 @@ namespace PRoConEvents
                 Output.Listeners.Remove(console);
             }
 
+            // remote shell
             if (remoteShellEnable)
             {
                 if (!remoteCommand.IsRunning)
@@ -116,6 +119,7 @@ namespace PRoConEvents
                 remoteCommand.Close();
             }
 
+            // restart
             if (restartProcon == enumBoolYesNo.Yes && confirmRestart == enumBoolYesNo.Yes)
             {
                 confirmRestart = enumBoolYesNo.No;
@@ -141,17 +145,7 @@ namespace PRoConEvents
 
         public string GetPluginDescription()
         {
-            return @"
-<h2>&#x000A;Description</h2>&#x000A;
-<p>This is a plugin for team work in the game.</p>&#x000A;
-<h2>&#x000A;Menu</h2>&#x000A;
-<blockquote>&#x000A;<p>Friend</p>&#x000A;</blockquote>&#x000A;
-<blockquote>&#x000A;<p>Enemy</p>&#x000A;</blockquote>&#x000A;
-<blockquote>&#x000A;<p>Setting</p>&#x000A;</blockquote>&#x000A;
-<blockquote>&#x000A;<p>Update</p>&#x000A;</blockquote>&#x000A;
-<blockquote>&#x000A;<p>Restart</p>&#x000A;</blockquote>&#x000A;
-<h2>&#x000A;History</h2>&#x000A;
-<p>TODO</p>";
+            return "This is a plugin for control remote procon.";
         }
 
         public string GetPluginName()
@@ -171,32 +165,29 @@ namespace PRoConEvents
 
         public string GetPluginWebsite()
         {
-            return "gitee.com/e1ki0lp/ProconPlugins";
+            return "https://github.com/IOL0ol1/ProconPlugins/blob/master/RemoteManager/RemoteManager.cs";
         }
 
         public void OnPluginDisable()
         {
             isEnable = false;
-            Output.TraceInformation(string.Format("^b{0} {1} ^1Disabled", GetPluginName(), GetPluginVersion()));
+            Output.Information(string.Format("^b{0} {1} ^1Disabled", GetPluginName(), GetPluginVersion()));
         }
 
         public void OnPluginEnable()
         {
-            Output.TraceInformation(string.Format("^b{0} {1} ^2Enabled", GetPluginName(), GetPluginVersion()));
-            //Command("admin.listPlayers", "all");
-            //Command("reservedSlotsList.list");
-            //RegisterAllCommands();
+            Output.Information(string.Format("^b{0} {1} ^2Enabled", GetPluginName(), GetPluginVersion()));
             isEnable = true;
         }
 
         public void OnPluginLoaded(string strHostName, string strPort, string strPRoConVersion)
         {
-            Output.Listeners.Add(new TextWriterTraceListener(VerifyDirectory("Log/{0}_{1}/{2}.log", strHostName, strPort, ClassName))); // output to debug file
+            Output.Listeners.Add(new TextWriterTraceListener(ClassName + "_" + strHostName + "_" + strPort + ".log") { TraceOutputOptions = TraceOptions.DateTime }); // output to debug file
             Output.Listeners.Add(new PRoConTraceListener(this)); // output to pluginconsole
             Output.AutoFlush = true;
 
-            remoteCommand.OnError = _ => Output.TraceError(_);
-            remoteCommand.OnOutput = _ => Output.TraceInformation(_);
+            remoteCommand.OnError = _ => Output.Error(_);
+            remoteCommand.OnOutput = _ => Output.Information(_);
 
             // Get common events in this class and PRoConPluginAPI
             BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly;
@@ -207,11 +198,9 @@ namespace PRoConEvents
 
         public void SetPluginVariable(string strVariable, string strValue)
         {
-            if (!isEnable)
-            {
-                Output.TraceWarning("Enable plugin to use all function!");
-                return;
-            }
+            // enable plugin to change variable
+            if (!isEnable) return;
+
             BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
 
             // search field to set value
@@ -245,17 +234,6 @@ namespace PRoConEvents
 
         #region Private Methods
 
-        private void Command(params string[] args)
-        {
-            List<string> list = new List<string>
-            {
-                "procon.protected.send"
-            };
-            list.AddRange(args);
-            ExecuteCommand(list.ToArray());
-            Output.TraceInformation(string.Join(" ", list.ToArray()));
-        }
-
         /// <summary>
         /// Restart remote PRoCon use powershell.
         /// <para>NOTE: MUST check the auto connection on remote PRoCon.</para>
@@ -264,7 +242,7 @@ namespace PRoConEvents
         {
             try
             {
-                Output.TraceWarning("Restart PRoCon {0}", DateTime.Now);
+                Output.Warning("Restart PRoCon {0}", DateTime.Now);
                 string startProcessCmd = string.Empty;
                 string processName = Process.GetCurrentProcess().ProcessName;
                 string processFileName = Process.GetCurrentProcess().MainModule.FileName;
@@ -287,7 +265,7 @@ namespace PRoConEvents
 
                     if (string.IsNullOrEmpty(serviceName))
                     {
-                        Output.TraceError("Restart failed! Not found service");
+                        Output.Error("Restart failed! Not found service");
                         return;
                     }
                     startProcessCmd = string.Format("start-service '{0}';", serviceName);
@@ -309,25 +287,29 @@ namespace PRoConEvents
                 string startSleepCmd = string.Format("start-sleep -seconds {0}", seconds);
                 string checkAndStartCmd = string.Format("if(!(get-process -name '{0}'|where path -eq '{1}')){{{2}}}", processName, processFileName, startProcessCmd);
                 string cmd = string.Format("-windowstyle hidden -command \"{0};{1};{2}\"", stopProcessCmd, startSleepCmd, checkAndStartCmd);
-                Output.TraceWarning("Restart after {0} seconds", seconds);
+                Output.Warning("Restart after {0} seconds", seconds);
                 // use powershell can hidden powershell window
                 Process.Start("powershell.exe", cmd);
             }
             catch (Exception ex)
             {
-                Output.TraceError(ex.Message);
-                Output.TraceError(ex.StackTrace);
+                Output.Error(ex.ToString());
             }
         }
 
-        private string VerifyDirectory(string format, params object[] args)
+        private void Command(params string[] args)
         {
-            string fileName = string.Format(format, args);
-            Directory.CreateDirectory(Path.GetDirectoryName(fileName));
-            return fileName;
+            if (args.Length == 0)
+                return;
+            List<string> list = new List<string> { "procon.protected.send" };
+            foreach (var item in args)
+            {
+                list.AddRange(item.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
+            }
+            ExecuteCommand(list.ToArray());
         }
 
-        private CPluginVariable CreateVariable<T>(Expression<Func<T>> exp, bool isHeader)
+        private CPluginVariable CreateVariable<T>(Expression<Func<T>> exp, bool isAddHeader)
         {
             /// only valid for remote,it's useless.
             /// <see cref="SetPluginVariable(string, string)"/>
@@ -342,7 +324,7 @@ namespace PRoConEvents
                 MenuAttribute attr = memberInfo.GetCustomAttributes(false).FirstOrDefault(_ => _ is MenuAttribute) as MenuAttribute;
                 if (attr != null)
                 {
-                    varName = isHeader ? attr.ToString() : attr.Name;
+                    varName = isAddHeader ? attr.ToString() : attr.Name;
                 }
             }
 
@@ -358,198 +340,6 @@ namespace PRoConEvents
 
         #endregion
     }
-
-    #region Menu Attribute
-
-    /// <summary>
-    /// Menu attribute for field. Get the variable by reflection according to the <see cref="Name"/>.
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Field)]
-    internal class MenuAttribute : Attribute
-    {
-        /// <summary>
-        /// The header of the variable in plugin setting tab.
-        /// </summary>
-        public readonly string Header;
-
-        /// <summary>
-        /// The name of the variable in plugin setting tab.it's unique value!!
-        /// </summary>
-        public readonly string Name;
-
-        public override string ToString()
-        {
-            return Header + "|" + Name;
-        }
-
-        public MenuAttribute(string header, string name)
-        {
-            Header = header;
-            Name = name;
-        }
-    }
-
-    #endregion
-
-    #region Procon Output
-
-    /// <summary>
-    /// <para><see cref="Trace"/> will be ignore when plugin compiled.</para>
-    /// <para><see cref="Debug"/> need checked 'enable plugin debug' in PRoCon.</para>
-    /// <para><see cref="Output"/> can be used anytime and anywhere in pcocon.</para>
-    /// </summary>
-    internal static class Output
-    {
-        public static bool AutoFlush { get; set; }
-
-        public static TraceListenerCollection Listeners { get; private set; }
-
-        static Output()
-        {
-            //Listeners = Debug.Listeners; // same as Debug.Listeners,it's golbal.
-            Listeners = typeof(TraceListenerCollection)
-                .GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null)
-                .Invoke(null) as TraceListenerCollection; // it's plug-in private
-        }
-
-        public static void Close()
-        {
-            foreach (TraceListener item in Listeners)
-            {
-                item.Flush();
-                item.Close();
-            }
-        }
-
-        public static void Flush()
-        {
-            foreach (TraceListener item in Listeners)
-            {
-                item.Flush();
-            }
-        }
-
-        public static void TraceError(string format, params object[] args)
-        {
-            TraceError(string.Format(format, args));
-        }
-
-        public static void TraceError(string message)
-        {
-            WriteLine("Error: " + "^8" + message + "^n"); // Red
-        }
-
-        public static void TraceInformation(string format, params object[] args)
-        {
-            TraceInformation(string.Format(format, args));
-        }
-
-        public static void TraceInformation(string message)
-        {
-            WriteLine("Information: " + "^4" + message + "^n"); // Royal Blue
-        }
-
-        public static void TraceWarning(string format, params object[] args)
-        {
-            TraceWarning(string.Format(format, args));
-        }
-
-        public static void TraceWarning(string message)
-        {
-            WriteLine("Warning: " + "^3" + message + "^n"); // Dark Orange
-        }
-
-        /// <summary>
-        /// Write line message, support some escape character.
-        /// <para>^0 Black</para>
-        /// <para>^1 Maroon</para>
-        /// <para>^2 Medium Sea Green</para>
-        /// <para>^3 Dark Orange</para>
-        /// <para>^4 Royal Blue</para>
-        /// <para>^5 Cornflower Blue</para>
-        /// <para>^6 Dark Violet</para>
-        /// <para>^7 Deep Pink</para>
-        /// <para>^8 Red</para>
-        /// <para>^9 Grey</para>
-        /// <para>^b Bold</para>
-        /// <para>^n Normal</para>
-        /// <para>^i Italicized</para>
-        /// <para>^^ ^(Escape character)</para>
-        /// </summary>
-        /// <param name="message">direct output</param>
-        public static void WriteLine(string message)
-        {
-            foreach (TraceListener item in Listeners)
-            {
-                item.WriteLine(message);
-                if (AutoFlush)
-                {
-                    item.Flush();
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Procon trace listener.
-    /// </summary>
-    internal class PRoConTraceListener : TraceListener
-    {
-        private readonly int output;
-
-        private readonly CPRoConMarshalByRefObject plugin;
-
-        /// <summary>
-        /// Construct, use pluginconsole output.
-        /// </summary>
-        /// <param name="pRoConPlugin">plugin instance</param>
-        public PRoConTraceListener(CPRoConMarshalByRefObject pRoConPlugin) : this(pRoConPlugin, 0)
-        { }
-
-        /// <summary>
-        /// Construct with output type.
-        /// </summary>
-        /// <param name="pRoConPlugin">plugin instance</param>
-        /// <param name="outputType">0 pluginconsole;1 console;2 chat</param>
-        public PRoConTraceListener(CPRoConMarshalByRefObject pRoConPlugin, int outputType)
-        {
-            plugin = pRoConPlugin;
-            output = outputType;
-        }
-
-        /// <summary>
-        /// As the same as <see cref="WriteLine(string)"/>.
-        /// NOTE: procon NOT supported write.
-        /// </summary>
-        /// <param name="message"></param>
-        public override void Write(string message)
-        {
-            switch (output)
-            {
-                case 0:
-                    plugin.ExecuteCommand("procon.protected.pluginconsole.write", message);
-                    return;
-
-                case 1:
-                    plugin.ExecuteCommand("procon.protected.console.write", message);
-                    return;
-
-                case 2:
-                    plugin.ExecuteCommand("procon.protected.chat.write", message);
-                    return;
-
-                default:
-                    return;
-            }
-        }
-
-        public override void WriteLine(string message)
-        {
-            Write(message);
-        }
-    }
-
-    #endregion
 
     #region Remote Command
 
@@ -621,6 +411,284 @@ namespace PRoConEvents
                 OnOutput(e.Data);
         }
 
-        #endregion
     }
+    #endregion
+
+    #region Template
+
+    #region Menu Attribute
+
+    /// <summary>
+    /// Menu attribute for field. Get the variable by reflection according to the <see cref="Name"/>.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Field)]
+    internal class MenuAttribute : Attribute
+    {
+        /// <summary>
+        /// The header of the variable in plugin setting tab.
+        /// </summary>
+        public readonly string Header;
+
+        /// <summary>
+        /// The name of the variable in plugin setting tab.it's unique value!!
+        /// </summary>
+        public readonly string Name;
+
+        public override string ToString()
+        {
+            return Header + "|" + Name;
+        }
+
+        public MenuAttribute(string header, string name)
+        {
+            Header = header;
+            Name = name;
+        }
+    }
+
+    #endregion
+
+    #region Procon Output
+
+    /// <summary>
+    /// <para><see cref="Trace"/> will be ignore when plugin compiled.</para>
+    /// <para><see cref="Debug"/> need checked 'enable plugin debug' in PRoCon.</para>
+    /// <para><see cref="Output"/> can be used anytime and anywhere in pcocon.</para>
+    /// </summary>
+    internal static class Output
+    {
+        public static bool AutoFlush { get; set; }
+
+        public static TraceListenerCollection Listeners { get; private set; }
+
+        static Output()
+        {
+            Listeners = typeof(TraceListenerCollection)
+                .GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null)
+                .Invoke(null) as TraceListenerCollection;
+        }
+
+        public static void Error(string format, params object[] args)
+        {
+            WriteLine(string.Format(format, args), TraceEventType.Error);
+        }
+
+        public static void Information(string format, params object[] args)
+        {
+            WriteLine(string.Format(format, args), TraceEventType.Information);
+        }
+
+        public static void Warning(string format, params object[] args)
+        {
+            WriteLine(string.Format(format, args), TraceEventType.Warning);
+        }
+
+        public static void Close()
+        {
+            foreach (TraceListener item in Listeners)
+            {
+                item.Flush();
+                item.Close();
+            }
+        }
+
+        public static void Flush()
+        {
+            foreach (TraceListener item in Listeners)
+            {
+                item.Flush();
+            }
+        }
+
+        private static void WriteLine(string message, TraceEventType eventType)
+        {
+            foreach (TraceListener item in Listeners)
+            {
+                item.TraceEvent(new TraceEventCache(), string.Empty, eventType, 0, message);
+                if (AutoFlush)
+                {
+                    item.Flush();
+                }
+            }
+        }
+        /// <summary>
+        /// Write line message, support some escape character.
+        /// <para>^0 Black</para>
+        /// <para>^1 Maroon</para>
+        /// <para>^2 Medium Sea Green</para>
+        /// <para>^3 Dark Orange</para>
+        /// <para>^4 Royal Blue</para>
+        /// <para>^5 Cornflower Blue</para>
+        /// <para>^6 Dark Violet</para>
+        /// <para>^7 Deep Pink</para>
+        /// <para>^8 Red</para>
+        /// <para>^9 Grey</para>
+        /// <para>^b Bold</para>
+        /// <para>^n Normal</para>
+        /// <para>^i Italicized</para>
+        /// <para>^^ ^(Escape character)</para>
+        /// </summary>
+        /// <param name="format"></param>
+        /// <param name="args"></param>
+        public static void WriteLine(string format, params object[] args)
+        {
+            foreach (TraceListener item in Listeners)
+            {
+                item.WriteLine(string.Format(format, args));
+                if (AutoFlush)
+                {
+                    item.Flush();
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Procon trace listener.
+    /// </summary>
+    internal class PRoConTraceListener : TraceListener
+    {
+        private readonly string prefix;
+
+        private readonly PRoConPluginAPI plugin;
+
+        /// <summary>
+        /// Construct, use pluginconsole output.
+        /// </summary>
+        /// <param name="pRoConPlugin">plugin instance</param>
+        public PRoConTraceListener(PRoConPluginAPI pRoConPlugin) : this(pRoConPlugin, 0)
+        { }
+
+        /// <summary>
+        /// Construct with output type.
+        /// </summary>
+        /// <param name="pRoConPlugin">plugin instance</param>
+        /// <param name="outputType">0 pluginconsole;1 console;2 chat</param>
+        public PRoConTraceListener(PRoConPluginAPI pRoConPlugin, int outputType)
+        {
+            plugin = pRoConPlugin;
+            switch (outputType)
+            {
+                case 2:
+                    prefix = "procon.protected.console.write";
+                    break;
+
+                case 1:
+                    prefix = "procon.protected.chat.write";
+                    break;
+
+                case 0:
+                default:
+                    prefix = "procon.protected.pluginconsole.write";
+                    break;
+            }
+        }
+
+        public override void TraceEvent(TraceEventCache eventCache, string source, TraceEventType eventType, int id, string message)
+        {
+            if (Filter != null && !Filter.ShouldTrace(eventCache, source, eventType, id, message, null, null, null))
+            {
+                return;
+            }
+            WriteLine(AddHeader(source, eventType, id) + message);
+            WriteFooter(eventCache);
+        }
+
+        private string AddHeader(string source, TraceEventType eventType, int id)
+        {
+            string eventTypeName = eventType.ToString();
+            switch (eventType)
+            {
+                case TraceEventType.Critical:
+                    eventTypeName = "^7" + eventTypeName + ":^0";
+                    break;
+                case TraceEventType.Error:
+                    eventTypeName = "^8" + eventTypeName + ":^0";
+                    break;
+                case TraceEventType.Warning:
+                    eventTypeName = "^3" + eventTypeName + ":^0";
+                    break;
+                case TraceEventType.Information:
+                    eventTypeName = "^4" + eventTypeName + ":^0";
+                    break;
+                case TraceEventType.Verbose:
+                    eventTypeName = "^2" + eventTypeName + ":^0";
+                    break;
+                default:
+                    eventTypeName = "^0" + eventTypeName + ":^0";
+                    break;
+            }
+            return string.Format(CultureInfo.InvariantCulture, "{0}{1} ", new object[]
+            {
+                string.IsNullOrEmpty(source) ? string.Empty : string.Format("[{0}] ",source),
+                eventTypeName,
+            });
+        }
+
+        private void WriteFooter(TraceEventCache eventCache)
+        {
+            if (eventCache == null)
+                return;
+            IndentLevel++;
+            if (IsEnabled(TraceOptions.ProcessId))
+            {
+                WriteLine("ProcessId=" + eventCache.ProcessId);
+            }
+            if (IsEnabled(TraceOptions.LogicalOperationStack))
+            {
+                string stack = "LogicalOperationStack=";
+                Stack logicalOperationStack = eventCache.LogicalOperationStack;
+                bool flag = true;
+                foreach (object obj in logicalOperationStack)
+                {
+                    if (!flag)
+                    {
+                        stack += ", ";
+                    }
+                    else
+                    {
+                        flag = false;
+                    }
+                    stack += obj.ToString();
+                }
+                WriteLine(stack);
+            }
+            if (IsEnabled(TraceOptions.ThreadId))
+            {
+                WriteLine("ThreadId=" + eventCache.ThreadId);
+            }
+            if (IsEnabled(TraceOptions.DateTime))
+            {
+                WriteLine("DateTime=" + eventCache.DateTime.ToString("o", CultureInfo.InvariantCulture));
+            }
+            if (IsEnabled(TraceOptions.Timestamp))
+            {
+                WriteLine("Timestamp=" + eventCache.Timestamp);
+            }
+            if (IsEnabled(TraceOptions.Callstack))
+            {
+                WriteLine("Callstack=" + eventCache.Callstack);
+            }
+            IndentLevel--;
+        }
+
+        private bool IsEnabled(TraceOptions opts)
+        {
+            return (opts & TraceOutputOptions) > TraceOptions.None;
+        }
+
+        public override void Write(string message)
+        {
+            plugin.ExecuteCommand(prefix, message);
+        }
+
+        public override void WriteLine(string message)
+        {
+            Write(string.Format("[{0}] {1}", plugin.ClassName, message));
+        }
+    }
+
+    #endregion
+
+    #endregion
 }

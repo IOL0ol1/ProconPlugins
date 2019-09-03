@@ -89,7 +89,6 @@ namespace PRoConEvents
         public void OnPluginLoaded(string strHostName, string strPort, string strPRoConVersion)
         {
             Output.Listeners.Add(new TextWriterTraceListener(ClassName + "_" + strHostName + "_" + strPort + ".log") { TraceOutputOptions = TraceOptions.DateTime }); // output to debug file
-            //Output.Listeners.Add(new ConsoleTraceListener());
             Output.Listeners.Add(new PRoConTraceListener(this)); // output to pluginconsole
             Output.AutoFlush = true;
 
@@ -108,7 +107,7 @@ namespace PRoConEvents
 
         public string GetPluginDescription()
         {
-            return "Log server player's EAGUID , PBGUID ,IPAddress, Country";
+            return "Very efficient to log player EAGUID, PBGUID, IPAddress, Country, etc.";
         }
 
         public string GetPluginVersion()
