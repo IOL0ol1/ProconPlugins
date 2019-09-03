@@ -1,7 +1,10 @@
-﻿using System;
+﻿using MySql.Data.MySqlClient;
+using PRoCon.Core;
+using PRoCon.Core.Players;
+using PRoCon.Core.Plugin;
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
@@ -9,12 +12,7 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.Remoting;
 using System.Windows.Forms;
-using MySql.Data.MySqlClient;
-using PRoCon.Core;
-using PRoCon.Core.Players;
-using PRoCon.Core.Plugin;
 
 namespace PRoConEvents
 {
@@ -71,19 +69,21 @@ namespace PRoConEvents
         public void OnPluginDisable()
         {
             isEnable = false;
-            Output.Information(string.Format("^b{0} {1} ^1Disabled^n", GetPluginName(), GetPluginVersion()));
+            Output.Information(string.Format("^b{0} {1} ^1Disabled^0", GetPluginName(), GetPluginVersion()));
             // Add some code
 
         }
 
         public void OnPluginEnable()
         {
+            Output.Information(string.Format("^b{0} {1} ^2Enabled^0", GetPluginName(), GetPluginVersion()));
+
+
             // Add some code
             InitDatabase();
             InitInsert();
 
             isEnable = true;
-            Output.Information(string.Format("^b{0} {1} ^2Enabled^n", GetPluginName(), GetPluginVersion()));
         }
 
         public void OnPluginLoaded(string strHostName, string strPort, string strPRoConVersion)
@@ -326,6 +326,7 @@ namespace PRoConEvents
             }
             catch (Exception ex)
             {
+                Output.WriteLine("-------------------");
                 Output.Error(ex.ToString());
             }
         }
@@ -607,17 +608,17 @@ namespace PRoConEvents
 
         public static void Error(string format, params object[] args)
         {
-            WriteLine(string.Format(format, args), TraceEventType.Error); // Red
+            WriteLine(string.Format(format, args), TraceEventType.Error);
         }
 
         public static void Information(string format, params object[] args)
         {
-            WriteLine(string.Format(format, args), TraceEventType.Information); // Royal Blue
+            WriteLine(string.Format(format, args), TraceEventType.Information);
         }
 
         public static void Warning(string format, params object[] args)
         {
-            WriteLine(string.Format(format, args), TraceEventType.Warning); // Dark Orange
+            WriteLine(string.Format(format, args), TraceEventType.Warning);
         }
 
         public static void Close()
@@ -641,14 +642,13 @@ namespace PRoConEvents
         {
             foreach (TraceListener item in Listeners)
             {
-                item.TraceEvent(new TraceEventCache(), "", eventType, 0, message);
+                item.TraceEvent(new TraceEventCache(), string.Empty, eventType, 0, message);
                 if (AutoFlush)
                 {
                     item.Flush();
                 }
             }
         }
-
         /// <summary>
         /// Write line message, support some escape character.
         /// <para>^0 Black</para>
@@ -666,12 +666,13 @@ namespace PRoConEvents
         /// <para>^i Italicized</para>
         /// <para>^^ ^(Escape character)</para>
         /// </summary>
-        /// <param name="message">direct output</param>
-        public static void WriteLine(string message)
+        /// <param name="format"></param>
+        /// <param name="args"></param>
+        public static void WriteLine(string format, params object[] args)
         {
             foreach (TraceListener item in Listeners)
             {
-                item.TraceEvent(new TraceEventCache(), "", TraceEventType.Verbose, 0, message);
+                item.WriteLine(string.Format(format, args));
                 if (AutoFlush)
                 {
                     item.Flush();
@@ -687,13 +688,13 @@ namespace PRoConEvents
     {
         private readonly string prefix;
 
-        private readonly CPRoConMarshalByRefObject plugin;
+        private readonly PRoConPluginAPI plugin;
 
         /// <summary>
         /// Construct, use pluginconsole output.
         /// </summary>
         /// <param name="pRoConPlugin">plugin instance</param>
-        public PRoConTraceListener(CPRoConMarshalByRefObject pRoConPlugin) : this(pRoConPlugin, 0)
+        public PRoConTraceListener(PRoConPluginAPI pRoConPlugin) : this(pRoConPlugin, 0)
         { }
 
         /// <summary>
@@ -701,7 +702,7 @@ namespace PRoConEvents
         /// </summary>
         /// <param name="pRoConPlugin">plugin instance</param>
         /// <param name="outputType">0 pluginconsole;1 console;2 chat</param>
-        public PRoConTraceListener(CPRoConMarshalByRefObject pRoConPlugin, int outputType)
+        public PRoConTraceListener(PRoConPluginAPI pRoConPlugin, int outputType)
         {
             plugin = pRoConPlugin;
             switch (outputType)
@@ -728,8 +729,7 @@ namespace PRoConEvents
                 return;
             }
             WriteLine(AddHeader(source, eventType, id) + message);
-            var methodInfo = typeof(TraceListener).GetMethod("WriteFooter", BindingFlags.NonPublic | BindingFlags.Instance);
-            methodInfo.Invoke(this, new[] { eventCache });
+            WriteFooter(eventCache);
         }
 
         private string AddHeader(string source, TraceEventType eventType, int id)
@@ -738,29 +738,81 @@ namespace PRoConEvents
             switch (eventType)
             {
                 case TraceEventType.Critical:
-                    eventTypeName = "^b^7" + eventTypeName + ":^n";
+                    eventTypeName = "^7" + eventTypeName + ":^0";
                     break;
                 case TraceEventType.Error:
-                    eventTypeName = "^b^8" + eventTypeName + ":^n";
+                    eventTypeName = "^8" + eventTypeName + ":^0";
                     break;
                 case TraceEventType.Warning:
-                    eventTypeName = "^b^3" + eventTypeName + ":^n";
+                    eventTypeName = "^3" + eventTypeName + ":^0";
                     break;
                 case TraceEventType.Information:
-                    eventTypeName = "^b^4" + eventTypeName + ":^n";
+                    eventTypeName = "^4" + eventTypeName + ":^0";
                     break;
                 case TraceEventType.Verbose:
-                    eventTypeName = "^b^2" + eventTypeName + ":^n";
+                    eventTypeName = "^2" + eventTypeName + ":^0";
                     break;
                 default:
-                    eventTypeName = "^b^0" + eventTypeName + ":^n";
+                    eventTypeName = "^0" + eventTypeName + ":^0";
                     break;
             }
             return string.Format(CultureInfo.InvariantCulture, "{0}{1} ", new object[]
             {
-                source,
+                string.IsNullOrEmpty(source) ? string.Empty : string.Format("[{0}] ",source),
                 eventTypeName,
             });
+        }
+
+        private void WriteFooter(TraceEventCache eventCache)
+        {
+            if (eventCache == null)
+                return;
+            IndentLevel++;
+            if (IsEnabled(TraceOptions.ProcessId))
+            {
+                WriteLine("ProcessId=" + eventCache.ProcessId);
+            }
+            if (IsEnabled(TraceOptions.LogicalOperationStack))
+            {
+                string stack = "LogicalOperationStack=";
+                Stack logicalOperationStack = eventCache.LogicalOperationStack;
+                bool flag = true;
+                foreach (object obj in logicalOperationStack)
+                {
+                    if (!flag)
+                    {
+                        stack += ", ";
+                    }
+                    else
+                    {
+                        flag = false;
+                    }
+                    stack += obj.ToString();
+                }
+                WriteLine(stack);
+            }
+            if (IsEnabled(TraceOptions.ThreadId))
+            {
+                WriteLine("ThreadId=" + eventCache.ThreadId);
+            }
+            if (IsEnabled(TraceOptions.DateTime))
+            {
+                WriteLine("DateTime=" + eventCache.DateTime.ToString("o", CultureInfo.InvariantCulture));
+            }
+            if (IsEnabled(TraceOptions.Timestamp))
+            {
+                WriteLine("Timestamp=" + eventCache.Timestamp);
+            }
+            if (IsEnabled(TraceOptions.Callstack))
+            {
+                WriteLine("Callstack=" + eventCache.Callstack);
+            }
+            IndentLevel--;
+        }
+
+        private bool IsEnabled(TraceOptions opts)
+        {
+            return (opts & TraceOutputOptions) > TraceOptions.None;
         }
 
         public override void Write(string message)
@@ -770,7 +822,7 @@ namespace PRoConEvents
 
         public override void WriteLine(string message)
         {
-            Write(message);
+            Write(string.Format("[{0}] {1}", plugin.ClassName, message));
         }
     }
 

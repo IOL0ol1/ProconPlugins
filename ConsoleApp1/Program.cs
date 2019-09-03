@@ -15,8 +15,11 @@ namespace ConsoleApp1
         {
             try
             {
-
-
+                ServerLogger serverLogger = new ServerLogger();
+                serverLogger.ClassName = nameof(ServerLogger);
+                serverLogger.OnPluginLoaded("", "", "");
+                serverLogger.OnPluginEnable();
+                serverLogger.OnPluginDisable();
             }
             catch (Exception ex)
             {
