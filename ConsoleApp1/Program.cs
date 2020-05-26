@@ -44,7 +44,7 @@ namespace ConsoleApp1
         private static T CreatePlugin<T>() where T : PRoConPluginAPI, new()
         {
             T plugin = new T();
-            plugin.ClassName = nameof(T);
+            plugin.ClassName = typeof(T).Name;
             return plugin;
         }
 
