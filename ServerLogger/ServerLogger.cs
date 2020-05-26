@@ -23,6 +23,7 @@ namespace PRoConEvents
         #region Menu List
 
         public const string MySQLSettings = "1 MySQL Settings";
+        public const string ServerSettings = "2 Server Settings";
 
         [Menu(MySQLSettings, "Hostname/IP")]
         public string hostName = "localhost";
@@ -39,7 +40,8 @@ namespace PRoConEvents
         [Menu(MySQLSettings, "Databases")]
         public string hostDatabase = string.Empty;
 
-        // Add some code
+        [Menu(ServerSettings, "Server Id")]
+        public int hostServerId = 0;
 
         private List<CPluginVariable> GetVariables(bool isAddHeader)
         {
@@ -50,7 +52,7 @@ namespace PRoConEvents
             pluginVariables.Add(CreateVariable(() => hostDatabase, isAddHeader));
             pluginVariables.Add(CreateVariable(() => hostUser, isAddHeader));
             pluginVariables.Add(CreateVariable(() => hostPassword, isAddHeader));
-            // Add some code
+            pluginVariables.Add(CreateVariable(() => hostServerId, isAddHeader));
 
             return pluginVariables;
         }
@@ -61,8 +63,6 @@ namespace PRoConEvents
 
         public List<CPluginVariable> GetDisplayPluginVariables()
         {
-            // Add some code. example code block:
-
             return GetVariables(true);
         }
 
@@ -70,16 +70,12 @@ namespace PRoConEvents
         {
             isEnable = false;
             Output.Information(string.Format("^b{0} {1} ^1Disabled^0", GetPluginName(), GetPluginVersion()));
-            // Add some code
-
         }
 
         public void OnPluginEnable()
         {
             Output.Information(string.Format("^b{0} {1} ^2Enabled^0", GetPluginName(), GetPluginVersion()));
 
-
-            // Add some code
             InitDatabase();
             InitInsert();
 
@@ -97,7 +93,6 @@ namespace PRoConEvents
             IEnumerable<string> baseMethods = typeof(PRoConPluginAPI).GetMethods().Where(_ => _.IsVirtual).Select(_ => _.Name);
             IEnumerable<string> commonMethods = GetType().GetMethods(bindingFlags).Where(_ => _.IsVirtual).Select(_ => _.Name).Intersect(baseMethods);
             RegisterEvents(ClassName, commonMethods.ToArray());
-            // Add some code
         }
 
         public string GetPluginAuthor()
@@ -112,12 +107,12 @@ namespace PRoConEvents
 
         public string GetPluginVersion()
         {
-            return "0.0.0.1";
+            return "0.0.1.1";
         }
 
         public string GetPluginWebsite()
         {
-            return "https://github.com/IOL0ol1/ProconPlugins/blob/master/ServerLogger/ServerLogger.cs";
+            return @"github.com/IOL0ol1/ProconPlugins/blob/master/ServerLogger/ServerLogger.cs";
         }
 
         public string GetPluginName()
@@ -166,24 +161,37 @@ namespace PRoConEvents
         #region Event
 
         /// <summary>
+        /// get version
+        /// </summary>
+        /// <param name="serverType"></param>
+        /// <param name="version"></param>
+        public override void OnVersion(string serverType, string version)
+        {
+            base.OnVersion(serverType, version);
+            this.serverType = serverType;
+            isGetVersion = true;
+        }
+
+        /// <summary>
         /// this event trigger on player join server
         /// </summary>
         /// <param name="soldierName"></param>
         /// <param name="guid"></param>
         public override void OnPlayerAuthenticated(string soldierName, string guid)
         {
+            if (!isEnable || !isGetVersion) return;
             base.OnPlayerAuthenticated(soldierName, guid);
             if (string.IsNullOrEmpty(soldierName) || guid.Length != 35)
                 return;
+            DateTime time = DateTime.Now;
             DbParameter[] parameters = new DbParameter[]
             {
-                    new MySqlParameter("@ipaddress", DBNull.Value),
-                    new MySqlParameter("@clantag", DBNull.Value),
+                    new MySqlParameter("@serverid", hostServerId),
+                    new MySqlParameter("@gametype", serverType ?? (object)DBNull.Value),
                     new MySqlParameter("@soldiername", soldierName),
                     new MySqlParameter("@eaguid",guid),
-                    new MySqlParameter("@pbguid", DBNull.Value),
-                    new MySqlParameter("@country", DBNull.Value),
-                    new MySqlParameter("@countrycode", DBNull.Value),
+                    new MySqlParameter("@firsttime", time),
+                    new MySqlParameter("@lasttime", time),
             };
             InsertEAInfo(parameters);
         }
@@ -195,8 +203,8 @@ namespace PRoConEvents
         /// <param name="subset"></param>
         public override void OnListPlayers(List<CPlayerInfo> players, CPlayerSubset subset)
         {
+            if (!isEnable) return;
             base.OnListPlayers(players, subset);
-            TestDatabase();
             hasListPlayers = true;
         }
 
@@ -206,10 +214,11 @@ namespace PRoConEvents
         /// </summary>
         public override void OnPunkbusterBeginPlayerInfo()
         {
+            if (!isEnable) return;
             base.OnPunkbusterBeginPlayerInfo();
-            if (hasListPlayers && !isAcceptConnection)
+            if (hasListPlayers && !isNewConnection)
                 isFirstEnable = false;
-            isAcceptConnection = true;
+            isNewConnection = true;
         }
 
         /// <summary>
@@ -217,22 +226,24 @@ namespace PRoConEvents
         /// </summary>
         public override void OnPunkbusterEndPlayerInfo()
         {
+            if (!isEnable) return;
             base.OnPunkbusterEndPlayerInfo();
-            isAcceptConnection = false;
+            isNewConnection = false;
         }
 
         /// <summary>
         /// this event will trigger when punkbuster get new player connect and run "pb_sv_plist" to list player.
-        /// <para>1, MUST waie "admin.listPlayers all" finished (<see cref="hasListPlayers"/>)</para>
-        /// <para>2, Only get new punkbuster player info (<see cref="isAcceptConnection"/>)</para>
+        /// <para>1, MUST wait "admin.listPlayers all" finished (<see cref="hasListPlayers"/>)</para>
+        /// <para>2, Only get new punkbuster player info (<see cref="isNewConnection"/>)</para>
         /// <para>3, If first enable plugin,get all punkbuster player info (<see cref="isFirstEnable"/>)</para>
         /// </summary>
         /// <param name="playerInfo"></param>
         public override void OnPunkbusterPlayerInfo(CPunkbusterInfo playerInfo)
         {
+            if (!isEnable) return;
             base.OnPunkbusterPlayerInfo(playerInfo);
 
-            if ((isAcceptConnection || isFirstEnable) && hasListPlayers)
+            if ((isNewConnection || isFirstEnable) && hasListPlayers)
             {
                 string soldierName = playerInfo.SoldierName;
                 if (!FrostbitePlayerInfoList.ContainsKey(soldierName) ||
@@ -260,16 +271,18 @@ namespace PRoConEvents
         #region Private Methods
 
         private bool hasListPlayers = false;
-        private bool isAcceptConnection = true;
+        private bool isNewConnection = true;
         private bool isFirstEnable = true;
-        private int retryTestCount = 0;
+        private string serverType = null;
+        private bool isGetVersion = false;
 
         private void InitInsert()
         {
             hasListPlayers = false;
-            isAcceptConnection = true;
+            isNewConnection = true;
             isFirstEnable = true;
-            retryTestCount = 0;
+            isGetVersion = false;
+            Command("version");
             Command("admin.listPlayers all");
         }
 
@@ -283,6 +296,7 @@ namespace PRoConEvents
             connectionStringBuilder.Add("port", hostPort);
             connectionStringBuilder.Add("user", hostUser);
             connectionStringBuilder.Add("password", hostPassword);
+            connectionStringBuilder.Add("database", hostDatabase);
             try
             {
                 using (DbConnection connection = new MySqlConnection(connectionStringBuilder.ConnectionString))
@@ -290,35 +304,28 @@ namespace PRoConEvents
                     connection.Open();
                     using (DbTransaction transaction = connection.BeginTransaction())
                     {
-                        try
+                        using (DbCommand command = connection.CreateCommand())
                         {
-                            using (DbCommand command = connection.CreateCommand())
-                            {
-                                command.Transaction = transaction;
-                                command.CommandText = string.Format("CREATE DATABASE if NOT EXISTS `{0}`", hostDatabase);
-                                command.ExecuteNonQuery();
-                                command.CommandText = string.Format("USE `{0}`", hostDatabase);
-                                command.ExecuteNonQuery();
-                                command.CommandText = string.Format("CREATE TABLE IF NOT EXISTS `{0}` (" +
-                                    "`id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT," +
-                                    "`gameid` INT(10) UNSIGNED NOT NULL DEFAULT '0'," +
-                                    "`ipaddress` VARCHAR(22) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci'," +
-                                    "`clantag` VARCHAR(5) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci'," +
-                                    "`soldiername` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci'," +
-                                    "`eaguid` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci'," +
-                                    "`pbguid` VARCHAR(32) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci'," +
-                                    "`country` VARCHAR(30) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci'," +
-                                    "`countrycode` VARCHAR(10) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci'," +
-                                    "PRIMARY KEY(`id`), UNIQUE INDEX `Index 2` (`eaguid`), UNIQUE INDEX `Index 3` (`pbguid`)" +
-                                    ") COLLATE = 'utf8mb4_general_ci'", ClassName);
-                                command.ExecuteNonQuery();
-                                transaction.Commit();
-                            }
-                        }
-                        catch
-                        {
-                            transaction.Rollback();
-                            throw;
+                            command.Transaction = transaction;
+                            command.CommandText = string.Format("CREATE TABLE IF NOT EXISTS `{0}`.`{1}` (" +
+                                "`id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT," +
+                                "`serverid` INT(10) DEFAULT NULL," +
+                                "`gametype` VARCHAR(10) NULL DEFAULT NULL," +
+                                "`ipaddress` VARCHAR(22) NULL DEFAULT NULL," +
+                                "`clantag` VARCHAR(5) NULL DEFAULT NULL," +
+                                "`soldiername` VARCHAR(20) NULL DEFAULT NULL," +
+                                "`eaguid` VARCHAR(35) NULL DEFAULT NULL ," +
+                                "`pbguid` VARCHAR(32) NULL DEFAULT NULL ," +
+                                "`country` VARCHAR(30) NULL DEFAULT NULL ," +
+                                "`countrycode` VARCHAR(10) NULL DEFAULT NULL ," +
+                                "`firsttime` datetime DEFAULT NULL," +
+                                "`lasttime` datetime DEFAULT NULL," +
+                                "PRIMARY KEY(`id`), " +
+                                "UNIQUE INDEX `Index 2` (`eaguid`), " +
+                                "UNIQUE INDEX `Index 3` (`pbguid`)" +
+                                ")", hostDatabase, ClassName);
+                            command.ExecuteNonQuery();
+                            transaction.Commit();
                         }
                     }
                 }
@@ -327,34 +334,6 @@ namespace PRoConEvents
             {
                 Output.WriteLine("-------------------");
                 Output.Error(ex.ToString());
-            }
-        }
-
-        public void TestDatabase()
-        {
-            DbConnectionStringBuilder connectionStringBuilder = new MySqlConnectionStringBuilder();
-            connectionStringBuilder.Add("server", hostName);
-            connectionStringBuilder.Add("port", hostPort);
-            connectionStringBuilder.Add("user", hostUser);
-            connectionStringBuilder.Add("password", hostPassword);
-            connectionStringBuilder.Add("database", hostDatabase);
-            try
-            {
-                using (DbConnection connection = new MySqlConnection(connectionStringBuilder.ConnectionString))
-                {
-                    connection.Open();
-                }
-                retryTestCount = 0;
-            }
-            catch (Exception ex)
-            {
-                Output.Error(ex.ToString());
-                if (retryTestCount++ > 5)
-                {
-                    retryTestCount = 0;
-                    Output.Error("{0} is disable", ClassName);
-                    EnablePlugin(false);
-                }
             }
         }
 
@@ -369,6 +348,7 @@ namespace PRoConEvents
             connectionStringBuilder.Add("port", hostPort);
             connectionStringBuilder.Add("user", hostUser);
             connectionStringBuilder.Add("password", hostPassword);
+            connectionStringBuilder.Add("database", hostDatabase);
             try
             {
                 using (DbConnection connection = new MySqlConnection(connectionStringBuilder.ConnectionString))
@@ -376,13 +356,10 @@ namespace PRoConEvents
                     connection.Open();
                     using (DbTransaction transaction = connection.BeginTransaction())
                     {
-                        DbCommand command = connection.CreateCommand();
-
-                        try
+                        using (DbCommand command = connection.CreateCommand())
                         {
                             // select playerid by eaguid
                             command.Transaction = transaction;
-
                             command.Parameters.AddRange(parameters);
                             command.CommandText = string.Format("SELECT `id` from `{0}`.`{1}` WHERE `eaguid` = @eaguid", hostDatabase, ClassName);
                             DbDataReader reader = command.ExecuteReader();
@@ -429,15 +406,6 @@ namespace PRoConEvents
                             }
                             transaction.Commit();
                         }
-                        catch
-                        {
-                            transaction.Rollback();
-                            throw;
-                        }
-                        finally
-                        {
-                            command.Dispose();
-                        }
                     }
                 }
             }
@@ -460,32 +428,22 @@ namespace PRoConEvents
                 connectionStringBuilder.Add("port", hostPort);
                 connectionStringBuilder.Add("user", hostUser);
                 connectionStringBuilder.Add("password", hostPassword);
+                connectionStringBuilder.Add("database", hostDatabase);
                 using (DbConnection connection = new MySqlConnection(connectionStringBuilder.ConnectionString))
                 {
                     connection.Open();
                     using (DbTransaction transaction = connection.BeginTransaction())
                     {
-                        DbCommand command = connection.CreateCommand();
-
-                        try
+                        using (DbCommand command = connection.CreateCommand())
                         {
                             // select playerid by eaguid
                             command.Transaction = transaction;
                             command.Parameters.AddRange(parameters);
                             command.CommandText = string.Format(
-                                "INSERT IGNORE INTO `{0}`.`{1}` (`soldiername`,`eaguid`) VALUE (@soldiername, @eaguid);" +
-                                "UPDATE `{0}`.`{1}` SET `soldiername` = @soldiername WHERE eaguid = @eaguid;", hostDatabase, ClassName);
+                                "INSERT IGNORE INTO `{0}`.`{1}` (`serverid`,`gametype`,`soldiername`,`eaguid`,`firsttime`) VALUE (@serverid,@gametype,@soldiername,@eaguid,@firsttime);" +
+                                "UPDATE `{0}`.`{1}` SET `soldiername` = @soldiername, `lasttime` = @lasttime WHERE eaguid = @eaguid;", hostDatabase, ClassName);
                             command.ExecuteNonQuery();
                             transaction.Commit();
-                        }
-                        catch
-                        {
-                            transaction.Rollback();
-                            throw;
-                        }
-                        finally
-                        {
-                            command.Dispose();
                         }
                     }
                 }
@@ -494,17 +452,6 @@ namespace PRoConEvents
             {
                 Output.Error(ex.ToString());
             }
-        }
-
-        private void EnablePlugin(bool isEnable)
-        {
-            string[] command = new string[]
-            {
-                "procon.protected.plugins.enable",
-                ClassName,
-                isEnable.ToString(),
-            };
-            ExecuteCommand(command);
         }
 
         private void Command(params string[] args)
