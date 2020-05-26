@@ -22,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerLogger", "ServerLogge
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExampleCollection", "ExampleCollection\ExampleCollection.csproj", "{86533BE3-B1B6-432D-9BD5-6C5D923F9712}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InGameExtension", "InGameExtension\InGameExtension.csproj", "{7A539888-F236-4B77-8C96-61987A10D92F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,6 +50,10 @@ Global
 		{86533BE3-B1B6-432D-9BD5-6C5D923F9712}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{86533BE3-B1B6-432D-9BD5-6C5D923F9712}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{86533BE3-B1B6-432D-9BD5-6C5D923F9712}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A539888-F236-4B77-8C96-61987A10D92F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A539888-F236-4B77-8C96-61987A10D92F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A539888-F236-4B77-8C96-61987A10D92F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A539888-F236-4B77-8C96-61987A10D92F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
