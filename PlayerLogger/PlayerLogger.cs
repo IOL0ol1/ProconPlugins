@@ -1,4 +1,9 @@
-﻿using System;
+﻿using PRoCon.Core;
+using PRoCon.Core.Battlemap;
+using PRoCon.Core.Players;
+using PRoCon.Core.Plugin;
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -6,63 +11,22 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Windows.Forms;
-
-using PRoCon.Core;
-using PRoCon.Core.Players;
-using PRoCon.Core.Plugin;
-using PRoCon.Core.Plugin.Commands;
 
 namespace PRoConEvents
 {
-    public class CInGameAdminEx : PRoConPluginAPI, IPRoConPluginInterface
+    public class PlayerLogger : PRoConPluginAPI, IPRoConPluginInterface
     {
-        private bool m_isPluginEnabled = false;
+        private bool isEnable = false;
 
         #region Menu List
 
-        public const string CommandsHeader = "Commands";
-        public const string ResponseScopeHeader = "Response Scope";
-        public const string ResponsesHeader = "Responses";
-
-
-        [Menu(CommandsHeader, "Swap Team")]
-        private string m_strSwapCommand = "swap";
-
-        [Menu(CommandsHeader, "Confirm Selection")]
-        private string m_strConfirmCommand = "yes";
-
-        [Menu(ResponseScopeHeader, "Private Prefix")]
-        private string m_strPrivatePrefix = "@";
-
-
-        [Menu(ResponseScopeHeader, "Admins Prefix")]
-        private string m_strAdminsPrefix = "#";
-
-
-        [Menu(ResponseScopeHeader, "Public Prefix")]
-        private string m_strPublicPrefix = "!";
-
-
-        [Menu(ResponsesHeader, "Show responses (seconds)")]
-        private string m_iShowMessageLength = "swap";
-
-
+ 
 
         // Add some code
 
         private List<CPluginVariable> GetVariables(bool isAddHeader)
         {
             List<CPluginVariable> pluginVariables = new List<CPluginVariable>();
-
-            // Add some code
-            pluginVariables.Add(CreateVariable(() => m_strSwapCommand, isAddHeader));
-            pluginVariables.Add(CreateVariable(() => m_strPrivatePrefix, isAddHeader));
-            pluginVariables.Add(CreateVariable(() => m_strAdminsPrefix, isAddHeader));
-            pluginVariables.Add(CreateVariable(() => m_strPublicPrefix, isAddHeader));
-            pluginVariables.Add(CreateVariable(() => m_iShowMessageLength, isAddHeader));
-
-
             return pluginVariables;
         }
 
@@ -72,85 +36,27 @@ namespace PRoConEvents
 
         public List<CPluginVariable> GetDisplayPluginVariables()
         {
-
             return GetVariables(true);
         }
 
         public void OnPluginDisable()
         {
             Output.Information(string.Format("^b{0} {1} ^1Disabled^n", GetPluginName(), GetPluginVersion()));
-            m_isPluginEnabled = false;
+            isEnable = false;
             // Add some code
-            UnregisterAllCommands(true);
         }
 
         public void OnPluginEnable()
         {
             Output.Information(string.Format("^b{0} {1} ^2Enabled^n", GetPluginName(), GetPluginVersion()));
             /// Add some code
-            m_isPluginEnabled = true;
-            RegisterAllCommands();
-        }
-
-        private void RegisterAllCommands()
-        {
-            if (!m_isPluginEnabled) return;
-
-            List<string> emptyList = new List<string>();
-            List<string> scopes = Listify<string>(m_strPrivatePrefix, m_strAdminsPrefix, m_strPublicPrefix);
-            MatchCommand confirmationCommand = new MatchCommand(scopes, m_strConfirmCommand, Listify<MatchArgumentFormat>());
-
-            RegisterCommand(
-                new MatchCommand(
-                    ClassName,
-                    "OnCommandSwapTeam",
-                    scopes,
-                    m_strSwapCommand,
-                    new List<MatchArgumentFormat>(),
-                    new ExecutionRequirements(ExecutionScope.Privileges, Privileges.CanMovePlayers | Privileges.CanKillPlayers, 2, confirmationCommand, "You do not have enough privileges to swap team"),
-                    "Swap team"
-                )
-            );
-
-        }
-
-        private void UnregisterAllCommands(bool force)
-        {
-            if (m_isPluginEnabled == true || force == true)
-            {
-                List<string> emptyList = new List<string>();
-
-                UnregisterCommand(
-                     new MatchCommand(
-                         emptyList,
-                         m_strSwapCommand,
-                         Listify<MatchArgumentFormat>()
-                     )
-                 );
-            }
-        }
-
-        public void OnCommandSwapTeam(string strSpeaker, string strText, MatchCommand mtcCommand, CapturedCommand capCommand, CPlayerSubset subMatchedScope)
-        {
-            ExecuteCommand("procon.protected.events.write", "Plugins", "PluginAction", String.Format("Initiated a swap team"), strSpeaker);
-
-            List<int> teamIds = FrostbitePlayerInfoList.Values.Select(_ => _.TeamID).Distinct().ToList();
-            Output.Information("TeamIds:" + string.Join(",",teamIds));
-            for (int i = 0; i < FrostbitePlayerInfoList.Count; i++)
-            {
-                var player = FrostbitePlayerInfoList.ElementAt(i).Value;
-                var name = player.SoldierName;
-                var dstTeamId = teamIds[((teamIds.IndexOf(player.TeamID) + 1) < teamIds.Count) ? (teamIds.IndexOf(player.TeamID) + 1) : 0];
-                var dstSquadId = player.SquadID;
-                ExecuteCommand("procon.protected.tasks.add", ClassName + strSpeaker, 10.ToString(), "1", "1", "procon.protected.send", "admin.movePlayer", name, dstTeamId.ToString(), dstSquadId.ToString(), true.ToString());
-                Output.Information("{0} {1} {2} {3} {4}", "admin.movePlayer", name, dstTeamId.ToString(), dstSquadId.ToString(), true.ToString());
-            }
+            isEnable = true;
         }
 
         public void OnPluginLoaded(string strHostName, string strPort, string strPRoConVersion)
         {
             Output.Listeners.Add(new TextWriterTraceListener(ClassName + "_" + strHostName + "_" + strPort + ".log")); // output to debug file
-            Output.Listeners.Add(new PRoConTraceListener(this)); // output to pluginconsole
+            Output.Listeners.Add(new PRoConTraceListener(this, 1)); // output to chat
             Output.AutoFlush = true;
 
             // Get and register common events in this class and PRoConPluginAPI
@@ -163,7 +69,7 @@ namespace PRoConEvents
 
         public string GetPluginAuthor()
         {
-            return "IOL0ol1";
+            return "Author";
         }
 
         public string GetPluginDescription()
@@ -173,7 +79,7 @@ namespace PRoConEvents
 
         public string GetPluginVersion()
         {
-            return "0.0.0.1";
+            return "Version";
         }
 
         public string GetPluginWebsite()
@@ -183,7 +89,7 @@ namespace PRoConEvents
 
         public string GetPluginName()
         {
-            return "In-Game Admin Ex";
+            return ClassName;
         }
 
         public List<CPluginVariable> GetPluginVariables()
@@ -193,7 +99,6 @@ namespace PRoConEvents
 
         public void SetPluginVariable(string strVariable, string strValue)
         {
-            UnregisterAllCommands(false);
             BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
 
             // search field to set value
@@ -226,14 +131,74 @@ namespace PRoConEvents
         #endregion
 
         #region Event
-
-        public override void OnListPlayers(List<CPlayerInfo> players, CPlayerSubset subset)
+ 
+        public override void OnResponseError(List<string> requestWords, string error)
         {
-            base.OnListPlayers(players, subset);
-            if (!m_isPluginEnabled) return;
-            // Add some code.
+            base.OnResponseError(requestWords, error);
+            Output.Information("{0}: Error:{1}", "OnResponseError", error);
+            foreach (var item in requestWords)
+            {
+                Output.Information("{0}: Request:{1}", "OnResponseError", item);
+            }
         }
 
+        public override void OnRunScript(string scriptFileName)
+        {
+            base.OnRunScript(scriptFileName);
+            Output.Information("{0}: ScripFileName:{1}", "OnRunScript", scriptFileName);
+        }
+        public override void OnRunScriptError(string scriptFileName, int lineError, string errorDescription)
+        {
+            base.OnRunScriptError(scriptFileName, lineError, errorDescription);
+            Output.Information("{0}: ScripFileName:{1} LineError:{2} Error:{3}", "OnRunScriptError", scriptFileName, lineError, errorDescription);
+        }
+
+        public override void OnReceiveProconVariable(string variableName, string value)
+        {
+            base.OnReceiveProconVariable(variableName, value);
+            Output.Information("{0}: VarName:{1} Value:{2}", "OnReceiveProconVariable", variableName, value);
+        }
+
+        public override void OnLevelVariablesEvaluate(LevelVariable requestedContext, LevelVariable returnedValue)
+        {
+            base.OnLevelVariablesEvaluate(requestedContext, returnedValue);
+            Output.Information("{0}: Request VarName:{1} Value:{2} Type:{3} Target:{4}", "OnLevelVariablesEvaluate", requestedContext.VariableName, requestedContext.RawValue, requestedContext.Context.ContextType, requestedContext.Context.ContextTarget);
+            Output.Information("{0}: Return  VarName:{1} Value:{2} Type:{3} Target:{4}", "OnLevelVariablesEvaluate", returnedValue.VariableName, returnedValue.RawValue, returnedValue.Context.ContextType, returnedValue.Context.ContextTarget);
+        }
+
+        public override void OnLevelVariablesList(LevelVariable requestedContext, List<LevelVariable> returnedValues)
+        {
+            base.OnLevelVariablesList(requestedContext, returnedValues);
+            Output.Information("{0}: Request VarName:{1} Value:{2} Type:{3} Target:{4}", "OnLevelVariablesList", requestedContext.VariableName, requestedContext.RawValue, requestedContext.Context.ContextType, requestedContext.Context.ContextTarget);
+            foreach (var returnedValue in returnedValues)
+            {
+                Output.Information("{0}: Return  VarName:{1} Value:{2} Type:{3} Target:{4}", "OnLevelVariablesList", returnedValue.VariableName, returnedValue.RawValue, returnedValue.Context.ContextType, returnedValue.Context.ContextTarget);
+            }
+        }
+
+        public override void OnZoneTrespass(CPlayerInfo playerInfo, ZoneAction action, MapZone sender, Point3D tresspassLocation, float tresspassPercentage, object trespassState)
+        {
+            base.OnZoneTrespass(playerInfo, action, sender, tresspassLocation, tresspassPercentage, trespassState);
+            Output.Information("{0}: SoldierName:{1} Action:{2} Level:{3} Uid:{4} ZoneInclusive:{5} Location:({6},{7},{8}) Percentage:{9} State:{10}",
+                "OnZoneTrespass",
+                playerInfo.SoldierName,
+                action,
+                sender.LevelFileName,
+                sender.UID,
+                sender.ZoneInclusive,
+                tresspassLocation.X, tresspassLocation.Y, tresspassLocation.Z,
+                tresspassPercentage,
+                trespassState);
+            foreach (var item in sender.Tags)
+            {
+                Output.Information("{0}: MapZone Tag:{1}", "OnZoneTrespass", item);
+            }
+            foreach (var item in sender.ZonePolygon)
+            {
+                Output.Information("{0}: MapZone Polygon:({1},{2},{3})", "OnZoneTrespass", item.X, item.Y, item.Z);
+            }
+        }
+ 
         #endregion
 
         #region Private Methods
