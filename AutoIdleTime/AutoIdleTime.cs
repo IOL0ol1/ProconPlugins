@@ -102,7 +102,7 @@ namespace PRoConEvents
 
         public string GetPluginWebsite()
         {
-            return "Website";
+            return "https://github.com/IOL0ol1/ProconPlugins/blob/master/AutoIdleTime/AutoIdleTime.cs";
         }
 
         public string GetPluginName()
