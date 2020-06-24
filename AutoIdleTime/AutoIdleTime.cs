@@ -92,7 +92,7 @@ namespace PRoConEvents
 
         public string GetPluginDescription()
         {
-            return string.Format("Auto Enable IdleTimeout {0} when player count >= {1}", DefaultTimeout, Threshold);
+            return string.Format("Auto Enable IdleTimeout DefaultTimeout when player count >= Threshold");
         }
 
         public string GetPluginVersion()
