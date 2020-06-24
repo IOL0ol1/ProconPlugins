@@ -9,6 +9,7 @@ This is a PRoCon plug-in project solution.
 **FriendManager** not completed.    
 **RemoteManager** can execute remote powershell or cmd commends through the local host    
 **ServerLogger** can record all player soldiername,eagudi,pbguid,ipaddress,country that enters the server    
+**AutoIdleTime** can auto enable idleTimeout DefaultTimeout when player count >= Threshold     
 
 
 ## How to use project template
