@@ -1,15 +1,14 @@
-﻿using System;
+﻿using PRoCon.Core;
+using PRoCon.Core.Plugin;
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-
-using PRoCon.Core;
-using PRoCon.Core.Plugin;
 
 namespace PRoConEvents
 {
@@ -24,6 +23,8 @@ namespace PRoConEvents
         public const string RconCommand = "1 RconCmd";
         public const string RestartHeader = "2 Restart";
         public const string RemotShellHeader = "3 RemoteShell";
+
+
 
         [Menu(RconCommand, "Rcon Cmd")]
         private string rconCmd = string.Empty;
@@ -43,6 +44,9 @@ namespace PRoConEvents
         [Menu(RemotShellHeader, "RemoteShell Warning!!")]
         private readonly string remoteShellWarning = "Change 'shell exec' need reenable shell to take effect";
 
+        [Menu(RemotShellHeader, "Procon PID")]
+        private readonly int remoteProconPid = Process.GetCurrentProcess().Id;
+        
         [Menu(RemotShellHeader, "Shell Exec")]
         private string remoteShellName = "powershell.exe";
 
@@ -69,6 +73,7 @@ namespace PRoConEvents
             }
 
             pluginVariables.Add(CreateVariable(() => remoteShellWarning, isDisplay));
+            pluginVariables.Add(CreateVariable(() => remoteProconPid, isDisplay));
             pluginVariables.Add(CreateVariable(() => remoteShellName, isDisplay));
             pluginVariables.Add(CreateVariable(() => remoteShellEnable, isDisplay));
             if (remoteShellEnable)
