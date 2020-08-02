@@ -54,7 +54,7 @@ namespace PRoConEvents
         private bool remoteShellEnable = false;
 
         [Menu(RemotShellHeader, "Remote Cmd")]
-        private string remotrCmd = string.Empty;
+        private string remoteCmd = string.Empty;
 
         [Menu(RemotShellHeader, "Remote Cmd History")]
         private string[] remoteCmdHistory = new string[0];
@@ -78,7 +78,7 @@ namespace PRoConEvents
             pluginVariables.Add(CreateVariable(() => remoteShellEnable, isDisplay));
             if (remoteShellEnable)
             {
-                pluginVariables.Add(CreateVariable(() => remotrCmd, isDisplay));
+                pluginVariables.Add(CreateVariable(() => remoteCmd, isDisplay));
                 pluginVariables.Add(CreateVariable(() => remoteCmdHistory, isDisplay));
             }
 
@@ -110,13 +110,13 @@ namespace PRoConEvents
                 if (!remoteCommand.IsRunning)
                     remoteCommand.Start(remoteShellName);
 
-                if (!string.IsNullOrEmpty(remotrCmd.Trim()))
+                if (!string.IsNullOrEmpty(remoteCmd.Trim()))
                 {
-                    remoteCommand.Executed(remotrCmd);
+                    remoteCommand.Executed(remoteCmd);
                     var tmpList = remoteCmdHistory.ToList();
-                    tmpList.Add(remotrCmd);
+                    tmpList.Add(remoteCmd);
                     remoteCmdHistory = tmpList.ToArray();
-                    remotrCmd = string.Empty;
+                    remoteCmd = string.Empty;
                 }
             }
             else
