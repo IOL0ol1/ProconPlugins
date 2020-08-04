@@ -4,11 +4,16 @@ using PRoCon.Core.Plugin;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
+using System.Drawing;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace PRoConEvents
 {
@@ -22,7 +27,8 @@ namespace PRoConEvents
 
         public const string RconCommand = "1 RconCmd";
         public const string RestartHeader = "2 Restart";
-        public const string RemotShellHeader = "3 RemoteShell";
+        public const string ScreenCaptureHeader = "3 ScreenCapture";
+        public const string RemotShellHeader = "4 RemoteShell";
 
 
 
@@ -46,7 +52,7 @@ namespace PRoConEvents
 
         [Menu(RemotShellHeader, "Procon PID")]
         private readonly int remoteProconPid = Process.GetCurrentProcess().Id;
-        
+
         [Menu(RemotShellHeader, "Shell Exec")]
         private string remoteShellName = "powershell.exe";
 
@@ -58,6 +64,15 @@ namespace PRoConEvents
 
         [Menu(RemotShellHeader, "Remote Cmd History")]
         private string[] remoteCmdHistory = new string[0];
+
+        [Menu(ScreenCaptureHeader, "Width")]
+        private int screenWidth = 800;
+
+        [Menu(ScreenCaptureHeader, "Height")]
+        private int screenHeight = 600;
+
+        [Menu(ScreenCaptureHeader, "Screen Capture")]
+        private string base64Image = string.Empty;
 
         private List<CPluginVariable> GetVariables(bool isDisplay)
         {
@@ -71,6 +86,10 @@ namespace PRoConEvents
             {
                 pluginVariables.Add(CreateVariable(() => confirmRestart, isDisplay));
             }
+
+            pluginVariables.Add(CreateVariable(() => screenWidth, isDisplay));
+            pluginVariables.Add(CreateVariable(() => screenHeight, isDisplay));
+            pluginVariables.Add(CreateVariable(() => base64Image, isDisplay));
 
             pluginVariables.Add(CreateVariable(() => remoteShellWarning, isDisplay));
             pluginVariables.Add(CreateVariable(() => remoteProconPid, isDisplay));
@@ -139,6 +158,11 @@ namespace PRoConEvents
                     isRestart = 0;
                     RestartPRoCon();
                 }
+            }
+
+            if (string.IsNullOrEmpty(base64Image))
+            {
+                base64Image = Convert.ToBase64String(Encoding.ASCII.GetBytes(ScreenHelper.CaptureScreen(screenWidth, screenHeight)));
             }
             return GetVariables(true);
         }
@@ -345,6 +369,110 @@ namespace PRoConEvents
 
         #endregion
     }
+
+
+    #region
+    public class ScreenHelper
+    {
+
+        public static string CaptureScreen(int iw, int ih)
+        {
+
+            string assemblyString = "System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a";
+            string bitmapTypeName = "System.Drawing.Bitmap";
+            string graphicsTypeName = "System.Drawing.Graphics";
+            string sizeTypeName = "System.Drawing.Size";
+            string imageFormatTypeName = "System.Drawing.Imaging.ImageFormat";
+            Assembly assembly = Assembly.Load(assemblyString);
+            object bitmap = assembly.CreateInstance(bitmapTypeName, true, BindingFlags.Public | BindingFlags.Instance, null,
+                new object[] { iw, ih }, null, null);
+
+            object graphics = assembly.GetType(graphicsTypeName)
+                .InvokeMember("FromImage", BindingFlags.Static | BindingFlags.Public | BindingFlags.InvokeMethod, null, null,
+                new object[] { bitmap });
+
+            object size = assembly.CreateInstance(sizeTypeName, true, BindingFlags.Public | BindingFlags.Instance, null,
+                new object[] { iw, ih }, null, null);
+
+            object imageFormat = assembly.GetType(imageFormatTypeName).GetProperty("Jpeg").GetValue(null, null);
+
+            using (MemoryStream ms = new MemoryStream())
+            {
+                graphics.GetType().InvokeMember("CopyFromScreen", BindingFlags.Public | BindingFlags.Instance | BindingFlags.InvokeMethod, null, graphics, new object[] { 0, 0, 0, 0, size });
+                MethodInfo save = bitmap.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance).Where(_ => _.Name == "Save").FirstOrDefault(_1 =>
+                  {
+                      ParameterInfo[] infos = _1.GetParameters();
+                      return infos.Length == 2 && infos[0].ParameterType == typeof(Stream);
+                  });
+                if (save != null)
+                {
+                    save.Invoke(bitmap, new object[] { ms, imageFormat });
+                    return "data:image/jpg;base64," + Convert.ToBase64String(ms.ToArray());
+                }
+            }
+            bitmap.GetType().GetMethod("Dispose").Invoke(bitmap, null);
+            graphics.GetType().GetMethod("Dispose").Invoke(graphics, null);
+            return string.Empty;
+        }
+
+        [Flags]
+        internal enum CopyPixelOperation
+        {
+            NoMirrorBitmap = -2147483648,
+
+            /// <summary>dest = BLACK, 0x00000042</summary>
+            Blackness = 66,
+
+            ///<summary>dest = (NOT src) AND (NOT dest), 0x001100A6</summary>
+            NotSourceErase = 1114278,
+
+            ///<summary>dest = (NOT source), 0x00330008</summary>
+            NotSourceCopy = 3342344,
+
+            ///<summary>dest = source AND (NOT dest), 0x00440328</summary>
+            SourceErase = 4457256,
+
+            /// <summary>dest = (NOT dest), 0x00550009</summary>
+            DestinationInvert = 5570569,
+
+            /// <summary>dest = pattern XOR dest, 0x005A0049</summary>
+            PatInvert = 5898313,
+
+            ///<summary>dest = source XOR dest, 0x00660046</summary>
+            SourceInvert = 6684742,
+
+            ///<summary>dest = source AND dest, 0x008800C6</summary>
+            SourceAnd = 8913094,
+
+            /// <summary>dest = (NOT source) OR dest, 0x00BB0226</summary>
+            MergePaint = 12255782,
+
+            ///<summary>dest = (source AND pattern), 0x00C000CA</summary>
+            MergeCopy = 12583114,
+
+            ///<summary>dest = source, 0x00CC0020</summary>
+            SourceCopy = 13369376,
+
+            /// <summary>dest = source OR dest, 0x00EE0086</summary>
+            SourcePaint = 15597702,
+
+            /// <summary>dest = pattern, 0x00F00021</summary>
+            PatCopy = 15728673,
+
+            /// <summary>dest = DPSnoo, 0x00FB0A09</summary>
+            PatPaint = 16452105,
+
+            /// <summary>dest = WHITE, 0x00FF0062</summary>
+            Whiteness = 16711778,
+
+            /// <summary>
+            /// Capture window as seen on screen.  This includes layered windows 
+            /// such as WPF windows with AllowsTransparency="true", 0x40000000
+            /// </summary>
+            CaptureBlt = 1073741824,
+        }
+    }
+    #endregion
 
     #region Remote Command
 
