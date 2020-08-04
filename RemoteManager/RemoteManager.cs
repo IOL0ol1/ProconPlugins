@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 
 namespace PRoConEvents
 {
@@ -23,7 +24,6 @@ namespace PRoConEvents
         public const string RconCommand = "1 RconCmd";
         public const string RestartHeader = "2 Restart";
         public const string RemotShellHeader = "3 RemoteShell";
-
 
 
         [Menu(RconCommand, "Rcon Cmd")]
@@ -46,7 +46,7 @@ namespace PRoConEvents
 
         [Menu(RemotShellHeader, "Procon PID")]
         private readonly int remoteProconPid = Process.GetCurrentProcess().Id;
-        
+
         [Menu(RemotShellHeader, "Shell Exec")]
         private string remoteShellName = "powershell.exe";
 
@@ -108,7 +108,7 @@ namespace PRoConEvents
             if (remoteShellEnable)
             {
                 if (!remoteCommand.IsRunning)
-                    remoteCommand.Start(remoteShellName);
+                    remoteCommand.Start(remoteShellName, _ => Output.Information(_), _ => Output.Error(_));
 
                 if (!string.IsNullOrEmpty(remoteCmd.Trim()))
                 {
@@ -190,9 +190,6 @@ namespace PRoConEvents
             Output.Listeners.Add(new TextWriterTraceListener(ClassName + "_" + strHostName + "_" + strPort + ".log") { TraceOutputOptions = TraceOptions.DateTime }); // output to debug file
             Output.Listeners.Add(new PRoConTraceListener(this)); // output to pluginconsole
             Output.AutoFlush = true;
-
-            remoteCommand.OnError = _ => Output.Error(_);
-            remoteCommand.OnOutput = _ => Output.Information(_);
 
             // Get common events in this class and PRoConPluginAPI
             BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly;
@@ -348,11 +345,13 @@ namespace PRoConEvents
 
     #region Remote Command
 
-    internal class RemoteCommand : IDisposable
+    public class RemoteCommand : IDisposable
     {
-        public Action<string> OnOutput;
-        public Action<string> OnError;
-        private Process process = new Process();
+        private Action<string> onOutput;
+        private Action<string> onError;
+        private Process process;
+        private bool disposedValue;
+
         public bool IsRunning { get; set; }
 
         public RemoteCommand()
@@ -360,10 +359,12 @@ namespace PRoConEvents
             IsRunning = false;
         }
 
-        public void Start(string fileName)
+        public void Start(string fileName, Action<string> output, Action<string> error)
         {
             try
             {
+                onOutput = output;
+                onError = error;
                 process = new Process();
                 process.StartInfo.FileName = fileName;
                 process.StartInfo.CreateNoWindow = true;
@@ -381,8 +382,8 @@ namespace PRoConEvents
             }
             catch (Exception ex)
             {
-                if (OnError != null)
-                    OnError(ex.Message);
+                if (onError != null)
+                    onError(ex.Message);
             }
         }
 
@@ -394,28 +395,57 @@ namespace PRoConEvents
 
         public void Close()
         {
-            process.Dispose();
+            if (IsRunning)
+            {
+                process.CancelErrorRead();
+                process.CancelOutputRead();
+                process.ErrorDataReceived -= Process_ErrorDataReceived;
+                process.OutputDataReceived -= Process_OutputDataReceived;
+                process.Dispose();
+            }
             GC.Collect(); // close shell faster
             IsRunning = false;
         }
 
-        public void Dispose()
-        {
-            Close();
-        }
+ 
 
         private void Process_ErrorDataReceived(object sender, DataReceivedEventArgs e)
         {
-            if (OnError != null)
-                OnError(e.Data);
+            try
+            {
+                if (onError != null)
+                    onError(e.Data);
+            }
+            catch (Exception) { }
         }
 
         private void Process_OutputDataReceived(object sender, DataReceivedEventArgs e)
         {
-            if (OnOutput != null)
-                OnOutput(e.Data);
+            try
+            {
+                if (onOutput != null)
+                    onOutput(e.Data);
+            }
+            catch (Exception) { }
         }
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    Close();
+                }
+                disposedValue = true;
+            }
+        }
+ 
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
     }
     #endregion
 

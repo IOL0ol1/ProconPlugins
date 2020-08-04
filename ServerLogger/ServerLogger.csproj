@@ -95,9 +95,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>xcopy $(TargetDir)$(TargetName).cs D:\PRocon\Plugins\BF4\ /s /e /y 
-del /s /q /f D:\PRoCon\Configs\$(TargetName).cfg
-xcopy $(TargetDir)$(TargetName).cs E:\Projects\Procon-1\builds\Debug\Plugins\BF4 /s /e /y 
-</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
 </Project>
