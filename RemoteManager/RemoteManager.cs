@@ -47,11 +47,15 @@ namespace PRoConEvents
         [Menu(RemotShellHeader, "Procon PID")]
         private readonly int remoteProconPid = Process.GetCurrentProcess().Id;
 
+
         [Menu(RemotShellHeader, "Shell Exec")]
         private string remoteShellName = "powershell.exe";
 
         [Menu(RemotShellHeader, "Enable Shell")]
         private bool remoteShellEnable = false;
+
+        [Menu(RemotShellHeader, "Shell PID")]
+        private int remoteShellPid = 0;
 
         [Menu(RemotShellHeader, "Remote Cmd")]
         private string remoteCmd = string.Empty;
@@ -78,6 +82,7 @@ namespace PRoConEvents
             pluginVariables.Add(CreateVariable(() => remoteShellEnable, isDisplay));
             if (remoteShellEnable)
             {
+                pluginVariables.Add(CreateVariable(() => remoteShellPid, isDisplay));
                 pluginVariables.Add(CreateVariable(() => remoteCmd, isDisplay));
                 pluginVariables.Add(CreateVariable(() => remoteCmdHistory, isDisplay));
             }
@@ -108,7 +113,10 @@ namespace PRoConEvents
             if (remoteShellEnable)
             {
                 if (!remoteCommand.IsRunning)
+                {
                     remoteCommand.Start(remoteShellName, _ => Output.Information(_), _ => Output.Error(_));
+                    remoteShellPid = remoteCommand.Pid;
+                }
 
                 if (!string.IsNullOrEmpty(remoteCmd.Trim()))
                 {
@@ -122,6 +130,7 @@ namespace PRoConEvents
             else
             {
                 remoteCommand.Close();
+                remoteShellPid = 0;
             }
 
             // restart
@@ -354,6 +363,8 @@ namespace PRoConEvents
 
         public bool IsRunning { get; set; }
 
+        public int Pid { get; set; }
+
         public RemoteCommand()
         {
             IsRunning = false;
@@ -378,6 +389,7 @@ namespace PRoConEvents
                 process.BeginErrorReadLine();
                 process.ErrorDataReceived += Process_ErrorDataReceived;
                 process.OutputDataReceived += Process_OutputDataReceived;
+                Pid = process.Id;
                 IsRunning = true;
             }
             catch (Exception ex)
@@ -402,12 +414,13 @@ namespace PRoConEvents
                 process.ErrorDataReceived -= Process_ErrorDataReceived;
                 process.OutputDataReceived -= Process_OutputDataReceived;
                 process.Dispose();
+                Pid = 0;
             }
             GC.Collect(); // close shell faster
             IsRunning = false;
         }
 
- 
+
 
         private void Process_ErrorDataReceived(object sender, DataReceivedEventArgs e)
         {
@@ -440,7 +453,7 @@ namespace PRoConEvents
                 disposedValue = true;
             }
         }
- 
+
         public void Dispose()
         {
             Dispose(true);
