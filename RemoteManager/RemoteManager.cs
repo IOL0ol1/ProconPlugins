@@ -44,9 +44,8 @@ namespace PRoConEvents
         [Menu(RemotShellHeader, "RemoteShell Warning!!")]
         private readonly string remoteShellWarning = "Change 'shell exec' need reenable shell to take effect";
 
-        [Menu(RemotShellHeader, "Procon PID")]
-        private readonly int remoteProconPid = Process.GetCurrentProcess().Id;
-
+        [Menu(RemotShellHeader, "Procon PID", IsReadOnly = true)]
+        private int remoteProconPid = Process.GetCurrentProcess().Id;
 
         [Menu(RemotShellHeader, "Shell Exec")]
         private string remoteShellName = "powershell.exe";
@@ -54,7 +53,7 @@ namespace PRoConEvents
         [Menu(RemotShellHeader, "Enable Shell")]
         private bool remoteShellEnable = false;
 
-        [Menu(RemotShellHeader, "Shell PID")]
+        [Menu(RemotShellHeader, "Shell PID", IsReadOnly = true)]
         private int remoteShellPid = 0;
 
         [Menu(RemotShellHeader, "Remote Cmd")]
@@ -220,7 +219,7 @@ namespace PRoConEvents
                 MenuAttribute menu = item.GetCustomAttributes(false).FirstOrDefault(_ => _ is MenuAttribute) as MenuAttribute;
                 if (menu != null && menu.Name == strVariable)
                 {
-                    if (item.IsInitOnly) return; // if it's readonly field, do not set value.
+                    if (item.IsInitOnly || menu.IsReadOnly) return; // if it's readonly field, do not set value.
                     object value = strValue;
                     if (item.FieldType.BaseType == typeof(Enum))
                     {
@@ -482,6 +481,8 @@ namespace PRoConEvents
         /// </summary>
         public readonly string Name;
 
+        public bool IsReadOnly { get; set; }
+
         public override string ToString()
         {
             return Header + "|" + Name;
@@ -491,6 +492,7 @@ namespace PRoConEvents
         {
             Header = header;
             Name = name;
+            IsReadOnly = false;
         }
     }
 
