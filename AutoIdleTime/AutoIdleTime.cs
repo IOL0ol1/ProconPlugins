@@ -20,11 +20,14 @@ namespace PRoConEvents
 
         public const string OptionsHeader = "Options";
 
-        [Menu(OptionsHeader, "Auto Enable Threshold")]
+        [Menu(OptionsHeader, "Enable threshold")]
         public int Threshold = 64;
 
-        [Menu(OptionsHeader, "Default IdleTimeout")]
+        [Menu(OptionsHeader, "Idle timeout(default 300s)")]
         public int DefaultTimeout = 300;
+
+        [Menu(OptionsHeader, "The number of samples(default 1,greater than 0)")]
+        public int SampleCount = 1;
 
         private List<CPluginVariable> GetVariables(bool isAddHeader)
         {
@@ -34,26 +37,34 @@ namespace PRoConEvents
             return pluginVariables;
         }
 
+        private List<int> historyCount = new List<int>();
+
+        public override void OnListPlayers(List<CPlayerInfo> players, CPlayerSubset subset)
+        {
+            base.OnListPlayers(players, subset);
+            if (isEnable)
+            {
+                historyCount.Add(FrostbitePlayerInfoList.Count);
+                if (historyCount.Count >= Math.Max(1, SampleCount))
+                {
+                    if (historyCount.Count(_ => _ >= Threshold) >= historyCount.Count)
+                    {
+
+                        Command("vars.idleTimeout", DefaultTimeout.ToString());
+                    }
+                    else
+                    {
+                        Command("vars.idleTimeout", "86400");
+                    }
+                    historyCount.Clear();
+                }
+            }
+        }
 
         #region IPRoConPluginInterface
 
         public List<CPluginVariable> GetDisplayPluginVariables()
         {
-            // Add some code. example code block:
-            if (isEnable)
-            {
-                if (base.FrostbitePlayerInfoList.Count >= Threshold)
-                {
-                    Output.Information("idleTimeout {0}", DefaultTimeout.ToString());
-                    Command("vars.idleTimeout", DefaultTimeout.ToString());
-                }
-                else
-                {
-                    Output.Information("idleTimeout disable");
-                    Command("vars.idleTimeout", "86400");
-                }
-            }
-
             return GetVariables(true);
         }
 
@@ -68,12 +79,12 @@ namespace PRoConEvents
         {
             Output.Information(string.Format("^b{0} {1} ^2Enabled^n", GetPluginName(), GetPluginVersion()));
             /// Add some code
+            historyCount.Clear();
             isEnable = true;
         }
 
         public void OnPluginLoaded(string strHostName, string strPort, string strPRoConVersion)
         {
-            Output.Listeners.Add(new TextWriterTraceListener(ClassName + "_" + strHostName + "_" + strPort + ".log")); // output to debug file
             Output.Listeners.Add(new PRoConTraceListener(this)); // output to pluginconsole
             Output.AutoFlush = true;
 
@@ -92,7 +103,7 @@ namespace PRoConEvents
 
         public string GetPluginDescription()
         {
-            return string.Format("Auto Enable IdleTimeout DefaultTimeout when player count >= Threshold");
+            return string.Format("Auto Enable IdleTimeout when player count >= Threshold");
         }
 
         public string GetPluginVersion()
