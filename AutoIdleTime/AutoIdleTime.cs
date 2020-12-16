@@ -34,6 +34,7 @@ namespace PRoConEvents
             List<CPluginVariable> pluginVariables = new List<CPluginVariable>();
             pluginVariables.Add(CreateVariable(() => Threshold, isAddHeader));
             pluginVariables.Add(CreateVariable(() => DefaultTimeout, isAddHeader));
+            pluginVariables.Add(CreateVariable(() => SampleCount, isAddHeader));
             return pluginVariables;
         }
 

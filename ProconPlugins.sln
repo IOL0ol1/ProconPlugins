@@ -4,13 +4,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.28803.156
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp1", "ConsoleApp1\ConsoleApp1.csproj", "{2CCC36CF-413A-43F4-B13B-993EB70977A8}"
-	ProjectSection(ProjectDependencies) = postProject
-		{49CE2641-755E-43C1-89B4-B926F54E66CA} = {49CE2641-755E-43C1-89B4-B926F54E66CA}
-	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteManager", "RemoteManager\RemoteManager.csproj", "{8ABE5AD8-BECB-4B86-A529-0218725F89A9}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FriendManager", "FriendManager\FriendManager.csproj", "{49CE2641-755E-43C1-89B4-B926F54E66CA}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{F85DC2B6-050B-4C80-A94D-D816CAF82AED}"
 	ProjectSection(SolutionItems) = preProject
@@ -26,9 +21,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InGameExtension", "InGameEx
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CInGameAdminEx", "CInGameAdminEx\CInGameAdminEx.csproj", "{18712CCA-E508-4686-A6E6-A876336A6CCE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlayerLogger", "PlayerLogger\PlayerLogger.csproj", "{4AEE3C6A-78CD-4AAB-B76A-C78C3D719409}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoIdleTime", "AutoIdleTime\AutoIdleTime.csproj", "{D03531AE-154C-41A3-8573-26B88303BFA3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdminLogger", "AdminLogger\AdminLogger.csproj", "{33964061-9D90-4C07-8828-7A94F0DEF10C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -44,10 +39,6 @@ Global
 		{8ABE5AD8-BECB-4B86-A529-0218725F89A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8ABE5AD8-BECB-4B86-A529-0218725F89A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8ABE5AD8-BECB-4B86-A529-0218725F89A9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{49CE2641-755E-43C1-89B4-B926F54E66CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{49CE2641-755E-43C1-89B4-B926F54E66CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{49CE2641-755E-43C1-89B4-B926F54E66CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{49CE2641-755E-43C1-89B4-B926F54E66CA}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A9FCD56A-B054-4E81-B696-B62CE6C781B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A9FCD56A-B054-4E81-B696-B62CE6C781B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A9FCD56A-B054-4E81-B696-B62CE6C781B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -64,14 +55,14 @@ Global
 		{18712CCA-E508-4686-A6E6-A876336A6CCE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{18712CCA-E508-4686-A6E6-A876336A6CCE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{18712CCA-E508-4686-A6E6-A876336A6CCE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4AEE3C6A-78CD-4AAB-B76A-C78C3D719409}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4AEE3C6A-78CD-4AAB-B76A-C78C3D719409}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4AEE3C6A-78CD-4AAB-B76A-C78C3D719409}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4AEE3C6A-78CD-4AAB-B76A-C78C3D719409}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D03531AE-154C-41A3-8573-26B88303BFA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D03531AE-154C-41A3-8573-26B88303BFA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D03531AE-154C-41A3-8573-26B88303BFA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D03531AE-154C-41A3-8573-26B88303BFA3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33964061-9D90-4C07-8828-7A94F0DEF10C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33964061-9D90-4C07-8828-7A94F0DEF10C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33964061-9D90-4C07-8828-7A94F0DEF10C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33964061-9D90-4C07-8828-7A94F0DEF10C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

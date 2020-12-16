@@ -60,10 +60,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\FriendManager\FriendManager.csproj">
-      <Project>{49CE2641-755E-43C1-89B4-B926F54E66CA}</Project>
-      <Name>FriendManager</Name>
-    </ProjectReference>
     <ProjectReference Include="..\RemoteManager\RemoteManager.csproj">
       <Project>{8abe5ad8-becb-4b86-a529-0218725f89a9}</Project>
       <Name>RemoteManager</Name>

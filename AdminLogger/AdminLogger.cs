@@ -1,41 +1,79 @@
-﻿using PRoCon.Core;
-using PRoCon.Core.Battlemap;
-using PRoCon.Core.Players;
-using PRoCon.Core.Plugin;
-
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Windows.Forms;
+
+using MySql.Data.MySqlClient;
+
+using PRoCon.Core;
+using PRoCon.Core.Battlemap;
+using PRoCon.Core.Players;
+using PRoCon.Core.Plugin;
 
 namespace PRoConEvents
 {
-    public class PlayerLogger : PRoConPluginAPI, IPRoConPluginInterface
+    public class AdminLogger : PRoConPluginAPI, IPRoConPluginInterface
     {
         private bool isEnable = false;
 
         #region Menu List
 
- 
+        public const string MySQLSettings = "1 MySQL Settings";
+        public const string ServerSettings = "2 Server Settings";
 
-        // Add some code
+        [Menu(MySQLSettings, "Hostname/IP")]
+        public string hostName = "localhost";
+
+        [Menu(MySQLSettings, "Port")]
+        public int hostPort = 3306;
+
+        [Menu(MySQLSettings, "User")]
+        public string hostUser = string.Empty;
+
+        [Menu(MySQLSettings, "Password")]
+        public string hostPassword = string.Empty;
+
+        [Menu(MySQLSettings, "Databases")]
+        public string hostDatabase = string.Empty;
+
+        [Menu(ServerSettings, "Server Id")]
+        public int hostServerId = 0;
+
+
+        private string serverType;
+        private bool isGetVersion;
 
         private List<CPluginVariable> GetVariables(bool isAddHeader)
         {
             List<CPluginVariable> pluginVariables = new List<CPluginVariable>();
+
+            pluginVariables.Add(CreateVariable(() => hostName, isAddHeader));
+            pluginVariables.Add(CreateVariable(() => hostPort, isAddHeader));
+            pluginVariables.Add(CreateVariable(() => hostDatabase, isAddHeader));
+            pluginVariables.Add(CreateVariable(() => hostUser, isAddHeader));
+            pluginVariables.Add(CreateVariable(() => hostPassword, isAddHeader));
+            pluginVariables.Add(CreateVariable(() => hostServerId, isAddHeader));
+
             return pluginVariables;
         }
 
         #endregion
 
+
+
         #region IPRoConPluginInterface
 
         public List<CPluginVariable> GetDisplayPluginVariables()
         {
+            // Add some code. example code block:
+
+
             return GetVariables(true);
         }
 
@@ -55,8 +93,8 @@ namespace PRoConEvents
 
         public void OnPluginLoaded(string strHostName, string strPort, string strPRoConVersion)
         {
-            Output.Listeners.Add(new TextWriterTraceListener(ClassName + "_" + strHostName + "_" + strPort + ".log")); // output to debug file
-            Output.Listeners.Add(new PRoConTraceListener(this, 1)); // output to chat
+            Output.Listeners.Add(new TextWriterTraceListener(ClassName + ".log", ClassName));
+            Output.Listeners.Add(new PRoConTraceListener(this)); // output to pluginconsole
             Output.AutoFlush = true;
 
             // Get and register common events in this class and PRoConPluginAPI
@@ -131,77 +169,229 @@ namespace PRoConEvents
         #endregion
 
         #region Event
- 
-        public override void OnResponseError(List<string> requestWords, string error)
+
+
+        /*
+         * 
+         * // player AiR-Cote kill player jinddog
+            OnPlayerKilled kClanTag: knoClan:False kSoldierName:AiR-Cote kGUID:EA_11AA9AE1D2A2E4414E7F5529E0F44220 kTeamID:1 kSquadID:2 kScore:3572 kKills:24 kDeaths:15 kPing:94 kRank:140 kType:0 kKdr:1.533333 kJoinTime:452663 kSessionTime:1069 vClanTag: vnoClan:False vSoldierName:jinddog vGUID:EA_A26FE0BE5D2DF1EA0DF91417B8DFE129 vTeamID:2 vSquadID:3 vScore:9717 vKills:66 vDeaths:15 vPing:8 vRank:140 vType:0 vKdr:4.714286 vJoinTime:446617 vSessionTime:7115 KillerLocation:[0,0,0] VictimLocation:[0,0,0] Headshot:True IsSuicide:False TimeOfDeath:2020/12/14 22:49:29 Distance:0
+
+
+            // Kill by admin( A squad is 1, H squad is 8)
+            OnPlayerKilled kClanTag: knoClan:False kSoldierName: kGUID: kTeamID:0 kSquadID:0 kScore:0 kKills:0 kDeaths:0 kPing:0 kRank:0 kType:0 kKdr:0 kJoinTime:0 kSessionTime:0 vClanTag: vnoClan:False vSoldierName:IOL0ol1 vGUID:EA_82AEE57A8442ED84572D96BE2C74D325 vTeamID:2 vSquadID:8 vScore:0 vKills:0 vDeaths:1 vPing:57 vRank:140 vType:0 vKdr:0 vJoinTime:453732 vSessionTime:0 KillerLocation:[0,0,0] VictimLocation:[0,0,0] Headshot:False IsSuicide:False TimeOfDeath:2020/12/14 22:49:46 Distance:0
+            OnPlayerKilled kClanTag: knoClan:False kSoldierName: kGUID: kTeamID:0 kSquadID:0 kScore:0 kKills:0 kDeaths:0 kPing:0 kRank:0 kType:0 kKdr:0 kJoinTime:0 kSessionTime:0 vClanTag: vnoClan:False vSoldierName:IOL0ol1 vGUID:EA_82AEE57A8442ED84572D96BE2C74D325 vTeamID:2 vSquadID:8 vScore:0 vKills:0 vDeaths:1 vPing:54 vRank:140 vType:0 vKdr:0 vJoinTime:453732 vSessionTime:86 KillerLocation:[0,0,0] VictimLocation:[0,0,0] Headshot:False IsSuicide:False TimeOfDeath:2020/12/14 22:51:00 Distance:0
+
+         */
+
+        public override void OnAccountLogin(string accountName, string ip, CPrivileges privileges)
         {
-            base.OnResponseError(requestWords, error);
-            Output.Information("{0}: Error:{1}", "OnResponseError", error);
-            foreach (var item in requestWords)
-            {
-                Output.Information("{0}: Request:{1}", "OnResponseError", item);
-            }
+            base.OnAccountLogin(accountName, ip, privileges);
+            Output.WriteLine("OnAccountLogin {0} {1} {2}", accountName, ip, privileges.PrivilegesFlags);
+        }
+        public override void OnAccountLogout(string accountName, string ip, CPrivileges privileges)
+        {
+            base.OnAccountLogout(accountName, ip, privileges);
+            Output.WriteLine("OnAccountLogout {0} {1} {2}", accountName, ip, privileges.PrivilegesFlags);
+
+        }
+
+        public override void OnAccountPrivilegesUpdate(string username, CPrivileges privileges)
+        {
+            base.OnAccountPrivilegesUpdate(username, privileges);
+        }
+
+        public override void OnLevelLoaded(string mapFileName, string gamemode, int roundsPlayed, int roundsTotal)
+        {
+            base.OnLevelLoaded(mapFileName, gamemode, roundsPlayed, roundsTotal);
+            Output.WriteLine("OnLevelLoaded {0} {1} {2} {3}", mapFileName, gamemode, roundsPlayed, roundsTotal);
+
+        }
+
+        public override void OnLevelStarted()
+        {
+            base.OnLevelStarted();
+            Output.WriteLine("OnLevelStarted");
+
+        }
+
+        public override void OnLoadingLevel(string mapFileName, int roundsPlayed, int roundsTotal)
+        {
+            base.OnLoadingLevel(mapFileName, roundsPlayed, roundsTotal);
+            Output.WriteLine("OnLoadingLevel {0} {1} {2}", mapFileName, roundsPlayed, roundsTotal);
+        }
+        public override void OnRunNextLevel()
+        {
+            base.OnRunNextLevel();
+            Output.WriteLine("OnRunNextLevel");
+
+        }
+
+        public override void OnEndRound(int iWinningTeamID)
+        {
+            base.OnEndRound(iWinningTeamID);
+            Output.WriteLine("OnEndRound {0}", iWinningTeamID);
         }
 
         public override void OnRunScript(string scriptFileName)
         {
             base.OnRunScript(scriptFileName);
-            Output.Information("{0}: ScripFileName:{1}", "OnRunScript", scriptFileName);
-        }
-        public override void OnRunScriptError(string scriptFileName, int lineError, string errorDescription)
-        {
-            base.OnRunScriptError(scriptFileName, lineError, errorDescription);
-            Output.Information("{0}: ScripFileName:{1} LineError:{2} Error:{3}", "OnRunScriptError", scriptFileName, lineError, errorDescription);
         }
 
-        public override void OnReceiveProconVariable(string variableName, string value)
+        public override void OnPlayerKilled(Kill kKillerVictimDetails)
         {
-            base.OnReceiveProconVariable(variableName, value);
-            Output.Information("{0}: VarName:{1} Value:{2}", "OnReceiveProconVariable", variableName, value);
+            base.OnPlayerKilled(kKillerVictimDetails);
         }
 
-        public override void OnLevelVariablesEvaluate(LevelVariable requestedContext, LevelVariable returnedValue)
-        {
-            base.OnLevelVariablesEvaluate(requestedContext, returnedValue);
-            Output.Information("{0}: Request VarName:{1} Value:{2} Type:{3} Target:{4}", "OnLevelVariablesEvaluate", requestedContext.VariableName, requestedContext.RawValue, requestedContext.Context.ContextType, requestedContext.Context.ContextTarget);
-            Output.Information("{0}: Return  VarName:{1} Value:{2} Type:{3} Target:{4}", "OnLevelVariablesEvaluate", returnedValue.VariableName, returnedValue.RawValue, returnedValue.Context.ContextType, returnedValue.Context.ContextTarget);
-        }
 
-        public override void OnLevelVariablesList(LevelVariable requestedContext, List<LevelVariable> returnedValues)
+        private IEnumerable<string> Kill2String(Kill k)
         {
-            base.OnLevelVariablesList(requestedContext, returnedValues);
-            Output.Information("{0}: Request VarName:{1} Value:{2} Type:{3} Target:{4}", "OnLevelVariablesList", requestedContext.VariableName, requestedContext.RawValue, requestedContext.Context.ContextType, requestedContext.Context.ContextTarget);
-            foreach (var returnedValue in returnedValues)
+            foreach (var item in k.GetType().GetProperties())
             {
-                Output.Information("{0}: Return  VarName:{1} Value:{2} Type:{3} Target:{4}", "OnLevelVariablesList", returnedValue.VariableName, returnedValue.RawValue, returnedValue.Context.ContextType, returnedValue.Context.ContextTarget);
+                var o = item.GetValue(k, null);
+                if (o.GetType().BaseType == typeof(ValueType))
+                    yield return string.Format("{0}:{1}", item.Name, o.ToString());
+                else if (o.GetType() == typeof(Point3D))
+                {
+                    Point3D p = (Point3D)o;
+                    yield return string.Format("{0}:[{1},{2},{3}]", item.Name, p.X, p.Y, p.Z);
+                }
+                else if (o.GetType() == typeof(CPlayerInfo))
+                {
+                    foreach (var pp in CPlayerInfo2String((CPlayerInfo)o))
+                    {
+                        yield return (item.Name.Contains("Kill") ? "k" : "v") + pp;
+                    }
+                }
             }
+        }
+
+        private IEnumerable<string> CPlayerInfo2String(CPlayerInfo p)
+        {
+            foreach (var item in p.GetType().GetProperties())
+            {
+                yield return string.Format("{0}:{1}", item.Name, item.GetValue(p, null));
+            }
+        }
+
+        public override void OnPlayerKickedByAdmin(string soldierName, string reason)
+        {
+            base.OnPlayerKickedByAdmin(soldierName, reason);
+        }
+
+        public override void OnPlayerKilledByAdmin(string soldierName)
+        {
+            base.OnPlayerKilledByAdmin(soldierName);
+            Output.WriteLine("OnPlayerKilledByAdmin {0}", soldierName);
+
+        }
+
+        public override void OnPlayerMovedByAdmin(string soldierName, int destinationTeamId, int destinationSquadId, bool forceKilled)
+        {
+            base.OnPlayerMovedByAdmin(soldierName, destinationTeamId, destinationSquadId, forceKilled);
+        }
+
+        public override void OnPlayerPingedByAdmin(string soldierName, int ping)
+        {
+            base.OnPlayerPingedByAdmin(soldierName, ping);
+        }
+
+        public override void OnBanAdded(CBanInfo ban)
+        {
+            base.OnBanAdded(ban);
+
         }
 
         public override void OnZoneTrespass(CPlayerInfo playerInfo, ZoneAction action, MapZone sender, Point3D tresspassLocation, float tresspassPercentage, object trespassState)
         {
             base.OnZoneTrespass(playerInfo, action, sender, tresspassLocation, tresspassPercentage, trespassState);
-            Output.Information("{0}: SoldierName:{1} Action:{2} Level:{3} Uid:{4} ZoneInclusive:{5} Location:({6},{7},{8}) Percentage:{9} State:{10}",
-                "OnZoneTrespass",
-                playerInfo.SoldierName,
-                action,
-                sender.LevelFileName,
-                sender.UID,
-                sender.ZoneInclusive,
-                tresspassLocation.X, tresspassLocation.Y, tresspassLocation.Z,
-                tresspassPercentage,
-                trespassState);
-            foreach (var item in sender.Tags)
-            {
-                Output.Information("{0}: MapZone Tag:{1}", "OnZoneTrespass", item);
-            }
-            foreach (var item in sender.ZonePolygon)
-            {
-                Output.Information("{0}: MapZone Polygon:({1},{2},{3})", "OnZoneTrespass", item.X, item.Y, item.Z);
-            }
         }
- 
+
+        public override void OnBanRemoved(CBanInfo ban)
+        {
+            base.OnBanRemoved(ban);
+        }
+
+        public override void OnPunkbusterBanInfo(CBanInfo ban)
+        {
+            base.OnPunkbusterBanInfo(ban);
+        }
+
+        /// <summary>
+        /// get version
+        /// </summary>
+        /// <param name="serverType"></param>
+        /// <param name="version"></param>
+        public override void OnVersion(string serverType, string version)
+        {
+            base.OnVersion(serverType, version);
+            this.serverType = serverType;
+            isGetVersion = true;
+        }
+
+        public override void OnListPlayers(List<CPlayerInfo> players, CPlayerSubset subset)
+        {
+            base.OnListPlayers(players, subset);
+            if (!isEnable) return;
+            // Add some code.
+        }
+
         #endregion
 
         #region Private Methods
+
+
+
+        /// <summary>
+        /// Create database by <see cref="hostDatabase"/> if not exist.
+        /// </summary>
+        private void InitDatabase()
+        {
+            DbConnectionStringBuilder connectionStringBuilder = new MySqlConnectionStringBuilder();
+            connectionStringBuilder.Add("server", hostName);
+            connectionStringBuilder.Add("port", hostPort);
+            connectionStringBuilder.Add("user", hostUser);
+            connectionStringBuilder.Add("password", hostPassword);
+            connectionStringBuilder.Add("database", hostDatabase);
+            try
+            {
+                using (DbConnection connection = new MySqlConnection(connectionStringBuilder.ConnectionString))
+                {
+                    connection.Open();
+                    using (DbTransaction transaction = connection.BeginTransaction())
+                    {
+                        using (DbCommand command = connection.CreateCommand())
+                        {
+                            command.Transaction = transaction;
+                            command.CommandText = string.Format("CREATE TABLE IF NOT EXISTS `{0}`.`{1}` (" +
+                                "`id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT," +
+                                "`serverid` INT(10) DEFAULT NULL," +
+                                "`gametype` VARCHAR(10) NULL DEFAULT NULL," +
+                                "`ipaddress` VARCHAR(22) NULL DEFAULT NULL," +
+                                "`clantag` VARCHAR(5) NULL DEFAULT NULL," +
+                                "`soldiername` VARCHAR(20) NULL DEFAULT NULL," +
+                                "`eaguid` VARCHAR(35) NULL DEFAULT NULL ," +
+                                "`pbguid` VARCHAR(32) NULL DEFAULT NULL ," +
+                                "`country` VARCHAR(30) NULL DEFAULT NULL ," +
+                                "`countrycode` VARCHAR(10) NULL DEFAULT NULL ," +
+                                "`firsttime` datetime DEFAULT NULL," +
+                                "`lasttime` datetime DEFAULT NULL," +
+                                "PRIMARY KEY(`id`), " +
+                                "UNIQUE INDEX `Index 2` (`eaguid`), " +
+                                "UNIQUE INDEX `Index 3` (`pbguid`)" +
+                                ")", hostDatabase, ClassName);
+                            command.ExecuteNonQuery();
+                            transaction.Commit();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Output.WriteLine("-------------------");
+                Output.Error(ex.ToString());
+            }
+        }
+
 
         private void Command(params string[] args)
         {
